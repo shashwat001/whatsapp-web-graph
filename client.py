@@ -74,8 +74,10 @@ class WhatsApp:
 
     def saveSession(self, jsonObj):
         jsonObj['myData'] = self.mydata
-        print(jsonObj)
-        print("Settings file: ", settingsFile)
+        if self.sessionExists:
+            for key, value in jsonObj.iteritems():
+                self.data[key] = value
+            jsonObj = self.data
         with open(settingsFile, 'w') as outfile:
             json.dump(jsonObj, outfile)
 
@@ -154,17 +156,20 @@ class WhatsApp:
         print("Socket Opened")
         print("ClientId", self.clientId)
         messageTag = str(getTimestamp())
+        message = messageTag + ',["admin","init",[0,3,2390],["Chromium at ' + datetime.datetime.now().isoformat() + '","Chromium"],"' + self.clientId + '",true]'
+        print(message)
+        ws.send(message)
+
         if self.data is not None:
             clientToken = self.data["clientToken"]
             serverToken = self.data["serverToken"]
+            messageTag = str(getTimestamp())
             message = ('%s,["admin","login","%s","%s","%s","takeover"]' % (messageTag, clientToken, serverToken, self.clientId))
             print(message)
             ws.send(message)
         else:
             print("No data")
-        message = messageTag + ',["admin","init",[0,3,2390],["Chromium at ' + datetime.datetime.now().isoformat() + '","Chromium"],"' + self.clientId + '",true]'
-        print(message)
-        ws.send(message)
+        
     
     def connect(self):
         self.initLocalParams()
