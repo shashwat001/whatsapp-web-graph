@@ -26,6 +26,7 @@ home = expanduser("~")
 settingsDir = home + "/.wweb"
 settingsFile = settingsDir + '/data.json'
 subscribeList = settingsDir + '/subscribe.json'
+presenceFile = settingsDir + '/presence.json'
 
 if not os.path.exists(settingsDir):
     os.makedirs(settingsDir)
@@ -102,6 +103,9 @@ class WhatsApp:
         print(message)
         self.ws.send(message)
 
+    def writePresenceToFile(self, userId, pType, pTime):
+        with open(presenceFile, "a+") as pFile:
+            pFile.write('%s %s %s\n' % (userId, pType, str(pTime)))
 
     def setConnInfoParams(self, secret):
         self.secret = secret
@@ -161,6 +165,10 @@ class WhatsApp:
                             ws.send(message)
                     elif jsonObj[0] == "Presence":
                         presenceInfo = jsonObj[1]
+                        userId = presenceInfo["id"]
+                        presencetype = presenceInfo["type"]
+                        presenceTime = getTimestampMs()
+                        self.writePresenceToFile(userId, presencetype, presenceTime)
                 elif isinstance(jsonObj, object):
                     print('Chance of status')
                     status = jsonObj["status"]
