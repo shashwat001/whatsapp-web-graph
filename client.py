@@ -66,6 +66,9 @@ class WhatsApp:
         print('ClientId', self.clientId)
         print('Exiting Initlocalparms')
 
+        if self.sessionExists:
+            self.setConnInfoParams(base64.b64decode(self.data["secret"]))
+
     def sendKeepAlive(self):
         Timer(25, lambda: self.ws.send('?,,')).start()
 
@@ -124,6 +127,18 @@ class WhatsApp:
                         if self.sessionExists is False:
                             self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
                         self.saveSession(jsonObj[1])
+                    elif jsonObj[0] == "Cmd":
+                        print("Challenge received")
+                        cmdInfo = jsonObj[1]
+                        if cmdInfo["type"] == "challenge":
+                            challenge = base64.b64decode(cmdInfo["challenge"])
+                            sign = base64.b64encode(HmacSha256(self.macKey, challenge))
+                            print('sign',sign)
+                            messageTag = str(getTimestamp())
+                            message = ('%s,["admin","challenge","%s","%s","%s"]' % (messageTag, sign, self.data["serverToken"], self.clientId))
+                            print('message', message)
+                            ws.send(message)
+                            
 
         except:
             print("Some error encountered")
