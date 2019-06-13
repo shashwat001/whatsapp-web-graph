@@ -25,6 +25,7 @@ import time
 home = expanduser("~")
 settingsDir = home + "/.wweb"
 settingsFile = settingsDir + '/data.json'
+subscribeList = settingsDir + '/subscribe.json'
 
 if not os.path.exists(settingsDir):
     os.makedirs(settingsDir)
@@ -88,6 +89,20 @@ class WhatsApp:
                 return data
         return None
 
+    def subscribe(self):
+        with open(subscribeList) as f:
+            lineList = f.readlines()
+            for line in lineList:
+                self.sendSubscribe(str.strip(line))
+
+    def sendSubscribe(self, userId):
+        print("Subsrcibing for", userId)
+        messageTag = str(getTimestampMs())
+        message = ('%s,,["action", "presence", "subscribe", "%s@c.us"]' % (messageTag, userId))
+        print(message)
+        self.ws.send(message)
+
+
     def setConnInfoParams(self, secret):
         self.secret = secret
         self.sharedSecret = self.privateKey.get_shared_key(curve25519.Public(secret[:32]), lambda a: a)
@@ -104,6 +119,9 @@ class WhatsApp:
     def on_message(self, ws, message):
         try:
             messageSplit = message.split(",", 1)
+            if len(messageSplit) == 1:
+                print('Single index message', message)
+                return
             messageTag = messageSplit[0]
             messageContent = messageSplit[1]
             print("Message Tag", messageTag)
@@ -129,6 +147,7 @@ class WhatsApp:
                         if self.sessionExists is False:
                             self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
                         self.saveSession(jsonObj[1])
+                        self.subscribe()
                     elif jsonObj[0] == "Cmd":
                         print("Challenge received")
                         cmdInfo = jsonObj[1]
@@ -140,6 +159,12 @@ class WhatsApp:
                             message = ('%s,["admin","challenge","%s","%s","%s"]' % (messageTag, sign, self.data["serverToken"], self.clientId))
                             print('message', message)
                             ws.send(message)
+                    elif jsonObj[0] == "Presence":
+                        presenceInfo = jsonObj[1]
+                elif isinstance(jsonObj, object):
+                    print('Chance of status')
+                    status = jsonObj["status"]
+                        
                             
 
         except:
