@@ -132,7 +132,8 @@ class WhatsApp:
             raise ValueError
         decryptedMessage = AESDecrypt(self.encKey,  message[32:])
         processedData = whatsappReadBinary(decryptedMessage, True);
-        logging.info("Actual Message: %s", processedData)
+        if(len(processedData) < 200):
+            logging.info("Actual Message: %s", processedData)
 
     def on_message(self, ws, message):
         try:
