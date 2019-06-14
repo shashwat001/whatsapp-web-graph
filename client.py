@@ -11,6 +11,7 @@ import json
 import pyqrcode
 import io
 import random
+import logging
 
 from utilities import *
 from threading import Timer
@@ -27,6 +28,8 @@ settingsDir = home + "/.wweb"
 settingsFile = settingsDir + '/data.json'
 subscribeList = settingsDir + '/subscribe.json'
 presenceFile = settingsDir + '/presence.json'
+
+logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
 if not os.path.exists(settingsDir):
     os.makedirs(settingsDir)
@@ -124,17 +127,17 @@ class WhatsApp:
         try:
             messageSplit = message.split(",", 1)
             if len(messageSplit) == 1:
-                print('Single index message', message)
+                logging.info('Single index message: %s', message)
                 return
             messageTag = messageSplit[0]
             messageContent = messageSplit[1]
-            print("Message Tag", messageTag)
+            logging.info("Message Tag: %s", messageTag)
 
             try:
                 jsonObj = json.loads(messageContent)
-                print("Raw msg: ", message)
+                logging.info("Raw msg: %s", message)
             except:
-                print("Error in loading message and messagecontent")
+                logging.info("Error in loading message and messagecontent")
             else:
                 if 'ref' in jsonObj:
                     if self.sessionExists is False:
