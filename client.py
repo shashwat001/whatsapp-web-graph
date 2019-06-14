@@ -16,6 +16,7 @@ import logging
 from utilities import *
 from threading import Timer
 from os.path import expanduser
+from whatsapp_binary_reader import whatsappReadBinary
 
 try:
     import thread
@@ -123,6 +124,16 @@ class WhatsApp:
         self.encKey = keysDecrypted[:32]
         self.macKey = keysDecrypted[32:64]
 
+    def handleBinaryMessage(self, message):
+        checkSum = message[:32]
+        hashHMAC = HmacSha256(self.macKey, message[32:])
+        if hashHMAC != checkSum:
+            logging.info("Invalid Checksum")
+            raise ValueError
+        decryptedMessage = AESDecrypt(self.encKey,  message[32:])
+        processedData = whatsappReadBinary(decryptedMessage, True);
+        logging.info("Actual Message: %s", processedData)
+
     def on_message(self, ws, message):
         try:
             messageSplit = message.split(",", 1)
@@ -138,6 +149,7 @@ class WhatsApp:
                 logging.info("Raw msg: %s", message)
             except:
                 logging.info("Error in loading message and messagecontent")
+                self.handleBinaryMessage(messageContent)
             else:
                 if 'ref' in jsonObj:
                     if self.sessionExists is False:
