@@ -4,6 +4,12 @@
 
 whatsapp-web-graph is a reverse engineered whatsapp-web python application to generate some interesting analytics and graphs on connected users.
 
+## Installation
+
+```
+pip install -r requirements.txt
+```
+
 ## Usage
 
 ```bash
