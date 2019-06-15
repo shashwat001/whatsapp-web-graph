@@ -49,6 +49,7 @@ class WhatsApp:
     data = {}
     mydata = {}
     sessionExists = False
+    keepAliveTimer = None
 
     def initLocalParams(self):
         print('Entering Initlocalparms')
@@ -76,7 +77,13 @@ class WhatsApp:
             self.setConnInfoParams(base64.b64decode(self.data["secret"]))
 
     def sendKeepAlive(self):
-        Timer(25, lambda: self.ws.send('?,,')).start()
+        message = "?,,"
+        self.ws.send(message)
+        logging.info(message)
+        if self.keepAliveTimer is not None:
+            self.keepAliveTimer.cancel()
+        self.keepAliveTimer = Timer(15, lambda: self.sendKeepAlive())
+        self.keepAliveTimer.start()
 
     def saveSession(self, jsonObj):
         jsonObj['myData'] = self.mydata
