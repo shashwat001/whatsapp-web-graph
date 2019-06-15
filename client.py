@@ -108,10 +108,13 @@ class WhatsApp:
         return None
 
     def subscribe(self):
-        with open(subscribeList) as f:
-            lineList = f.readlines()
-            for line in lineList:
-                self.sendSubscribe(str.strip(line))
+        try:
+            with open(subscribeList) as f:
+                lineList = f.readlines()
+                for line in lineList:
+                    self.sendSubscribe(str.strip(line))
+        except:
+            logging.info("Subscribe list not present")
 
     def sendSubscribe(self, userId):
         logging.info('Subsrcibing for %s' % userId)
