@@ -12,6 +12,7 @@ import pyqrcode
 import io
 import random
 import logging
+from worker import Worker
 
 from utilities import *
 from threading import Timer
@@ -36,8 +37,6 @@ if not os.path.exists(settingsDir):
 if not os.path.exists(loggingDir):
     os.makedirs(loggingDir)
 
-logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message)s', level=logging.INFO)
-
 
 
 class WhatsApp:
@@ -55,6 +54,10 @@ class WhatsApp:
     mydata = {}
     sessionExists = False
     keepAliveTimer = None
+    worker = None
+
+    def __init__(self, worker):
+        self.worker = worker
 
     def initLocalParams(self):
         logging.info('Entering Initlocalparms')
@@ -139,10 +142,11 @@ class WhatsApp:
         hashHMAC = HmacSha256(self.macKey, message[32:])
         if hashHMAC != checkSum:
             logging.info("Invalid Checksum")
-            raise ValueError
+            return
         decryptedMessage = AESDecrypt(self.encKey,  message[32:])
         processedData = whatsappReadBinary(decryptedMessage, True)
         logging.info("Actual Message: %s", processedData)
+        self.worker.handleIfConversation(processedData)
 
     def on_message(self, ws, message):
         try:
@@ -242,4 +246,5 @@ class WhatsApp:
 
 
 if __name__ == "__main__":
-    WhatsApp().connect()
+    logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message)s', level=logging.INFO)
+    WhatsApp(Worker()).connect()
