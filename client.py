@@ -27,7 +27,7 @@ import time
 home = expanduser("~")
 settingsDir = home + "/.wweb"
 settingsFile = settingsDir + '/data.json'
-loggingDir = "./error"
+loggingDir = "./logs"
 subscribeList = settingsDir + '/subscribe.json'
 presenceFile = settingsDir + '/presence.json'
 
@@ -57,7 +57,7 @@ class WhatsApp:
     keepAliveTimer = None
 
     def initLocalParams(self):
-        print('Entering Initlocalparms')
+        logging.info('Entering Initlocalparms')
         self.data = self.restoreSession()
         keySecret = None
         if self.data is None:
@@ -70,13 +70,13 @@ class WhatsApp:
             self.mydata = self.data['myData']
             keySecret = base64.b64decode(self.mydata["keySecret"])
 
-        print('Keysecret', keySecret)
+        logging.info('Keysecret %s' % keySecret)
         self.clientId = self.mydata['clientId']
         self.privateKey = curve25519.Private(secret=keySecret)
         self.publicKey = self.privateKey.get_public()
-        print('Privatekey',self.privateKey)
-        print('ClientId', self.clientId)
-        print('Exiting Initlocalparms')
+        logging.info('Privatekey %s' % self.privateKey)
+        logging.info('ClientId %s' % self.clientId)
+        logging.info('Exiting Initlocalparms')
 
         if self.sessionExists:
             self.setConnInfoParams(base64.b64decode(self.data["secret"]))
@@ -113,10 +113,10 @@ class WhatsApp:
                 self.sendSubscribe(str.strip(line))
 
     def sendSubscribe(self, userId):
-        print("Subsrcibing for", userId)
+        logging.info('Subsrcibing for %s' % userId)
         messageTag = str(getTimestampMs())
         message = ('%s,,["action", "presence", "subscribe", "%s@c.us"]' % (messageTag, userId))
-        print(message)
+        logging.info(message)
         self.ws.send(message)
 
     def writePresenceToFile(self, userId, pType, pTime):
@@ -144,7 +144,7 @@ class WhatsApp:
             raise ValueError
         decryptedMessage = AESDecrypt(self.encKey,  message[32:])
         processedData = whatsappReadBinary(decryptedMessage, True)
-        # logging.info("Actual Message: %s", processedData)
+        logging.info("Actual Message: %s", processedData)
 
     def on_message(self, ws, message):
         try:
@@ -173,22 +173,22 @@ class WhatsApp:
                         print(img.terminal(quiet_zone=1))
                 elif isinstance(jsonObj, list) and len(jsonObj) > 0:
                     if jsonObj[0] == "Conn":
-                        print("Connection msg received")
+                        logging.info("Connection msg received")
                         self.sendKeepAlive()
                         if self.sessionExists is False:
                             self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
                         self.saveSession(jsonObj[1])
                         self.subscribe()
                     elif jsonObj[0] == "Cmd":
-                        print("Challenge received")
+                        logging.info("Challenge received")
                         cmdInfo = jsonObj[1]
                         if cmdInfo["type"] == "challenge":
                             challenge = base64.b64decode(cmdInfo["challenge"])
                             sign = base64.b64encode(HmacSha256(self.macKey, challenge))
-                            print('sign',sign)
+                            logging.info('sign %s' % sign)
                             messageTag = str(getTimestamp())
                             message = ('%s,["admin","challenge","%s","%s","%s"]' % (messageTag, sign, self.data["serverToken"], self.clientId))
-                            print('message', message)
+                            logging.info('message %s' % message)
                             ws.send(message)
                     elif jsonObj[0] == "Presence":
                         presenceInfo = jsonObj[1]
@@ -197,24 +197,23 @@ class WhatsApp:
                         presenceTime = getTimestampMs()
                         self.writePresenceToFile(userId, presencetype, presenceTime)
                 elif isinstance(jsonObj, object):
-                    print('Chance of status')
                     status = jsonObj["status"]
                         
                             
 
         except:
-            print("Some error encountered")
+            logging.info("Some error encountered")
             raise
 
     def on_error(self, ws, error):
-        print(error)
+        logging.info(error)
 
     def on_close(self, ws):
-        print("### closed ###")
+        logging.info("### closed ###")
 
     def on_open(self, ws):
-        print("Socket Opened")
-        print("ClientId", self.clientId)
+        logging.info("Socket Opened")
+        logging.info("ClientId %s" % self.clientId)
         messageTag = str(getTimestamp())
         message = messageTag + ',["admin","init",[0,3,2390],["Chromium at ' + datetime.datetime.now().isoformat() + '","Chromium"],"' + self.clientId + '",true]'
         print(message)
