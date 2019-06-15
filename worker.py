@@ -1,6 +1,6 @@
 import logging
 
-# ['action', {'add': 'relay'}, [{u'status': u'ERROR', u'message': {u'conversation': u'Test'}, u'key': {u'remoteJid': u'919472458688@s.whatsapp.net', u'fromMe': False, u'id': u'62EC04FB60FFBD8A284C28E823EE2D5E'}, u'messageTimestamp': u'1560598969'}]]
+# ['action', {'add': 'relay'}, [{u'status': u'ERROR', u'message': {u'conversation': u'Test'}, u'key': {u'remoteJid': u'3456345@s.whatsapp.net', u'fromMe': False, u'id': u'62EC04FB60FFBD8A284C28E823EE2D5E'}, u'messageTimestamp': u'1560598969'}]]
 class Worker:
 
     def __init__(self):
@@ -17,6 +17,7 @@ class Worker:
 
     def handleConversation(self, sender, message):
         userId = self.getUserIdIfUser(sender)
+        logging.info("UserId: %s, Message:%s" % (userId, message))
         
 
     def handleIfConversation(self, messageJson):
