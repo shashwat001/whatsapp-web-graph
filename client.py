@@ -70,11 +70,9 @@ class WhatsApp:
             self.mydata = self.data['myData']
             keySecret = base64.b64decode(self.mydata["keySecret"])
 
-        logging.info('Keysecret %s' % keySecret)
         self.clientId = self.mydata['clientId']
         self.privateKey = curve25519.Private(secret=keySecret)
         self.publicKey = self.privateKey.get_public()
-        logging.info('Privatekey %s' % self.privateKey)
         logging.info('ClientId %s' % self.clientId)
         logging.info('Exiting Initlocalparms')
 
