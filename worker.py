@@ -6,14 +6,18 @@ class Worker:
     def __init__(self):
         a = None
 
-    def handleConversation(self, sender, message):
+    def getUserIdIfUser(self, sender):
         jid = sender.split('@')[0]
         logging.info("Jid: %s" % jid)
-        userId = jid.split('-')
-        if len(userId) > 0:
+        splitList = jid.split('-')
+        if len(splitList) > 1:
             logging.info("Seems message from group: %s" % sender)
-            return
-        logging.info("Sender userid: %s" % userId)
+            raise ValueError("Sender seems a group")
+        return splitList[0]
+
+    def handleConversation(self, sender, message):
+        userId = self.getUserIdIfUser(sender)
+        
 
     def handleIfConversation(self, messageJson):
         logging.info("Worker %s" % messageJson)
