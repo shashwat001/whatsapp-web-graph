@@ -27,13 +27,18 @@ import time
 home = expanduser("~")
 settingsDir = home + "/.wweb"
 settingsFile = settingsDir + '/data.json'
+loggingDir = "./error"
 subscribeList = settingsDir + '/subscribe.json'
 presenceFile = settingsDir + '/presence.json'
 
-logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
-
 if not os.path.exists(settingsDir):
     os.makedirs(settingsDir)
+if not os.path.exists(loggingDir):
+    os.makedirs(loggingDir)
+
+logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message)s', level=logging.INFO)
+
+
 
 class WhatsApp:
 
