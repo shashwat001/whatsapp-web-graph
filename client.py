@@ -13,13 +13,17 @@ import io
 import random
 import logging
 import yaml
+import binascii
+
 from worker import Worker
+from random import Random
 
 from utilities import *
 from threading import Timer
 from os.path import expanduser
 from whatsapp_binary_reader import whatsappReadBinary
 from whatsapp_binary_writer import whatsappWriteBinary
+from whatsapp_defines import *;
 
 try:
     import thread
@@ -57,6 +61,7 @@ class WhatsApp:
     sessionExists = False
     keepAliveTimer = None
     worker = None
+    messageSentCount = 0
 
     def __init__(self, worker):
         self.worker = worker
@@ -153,6 +158,16 @@ class WhatsApp:
         logging.info("Actual Message: %s", processedData)
         self.worker.handleIfConversation(processedData)
 
+    def sendTextMessage(self, number, text):
+        messageId = "3EB0"+binascii.hexlify(os.urandom(8)).upper()
+        messageTag = str(getTimestamp())
+        messageParams = {"key": {"fromMe": True, "remoteJid": number + "@s.whatsapp.net", "id": messageId},"messageTimestamp": getTimestamp(), "status": 1, "message": {"conversation": text}}
+        msgData = ["action", {"type": "relay", "epoch": str(self.messageSentCount)},[["message", None, WAWebMessageInfo.encode(messageParams)]]]
+        encryptedMessage = WhatsAppEncrypt(self.encKey, self.macKey,whatsappWriteBinary(msgData))
+        payload = bytearray(messageId) + bytearray(",") + bytearray(to_bytes(WAMetrics.MESSAGE, 1)) + bytearray([0x80]) + encryptedMessage
+        self.messageSentCount = self.messageSentCount + 1
+        self.ws.send(payload, websocket.ABNF.OPCODE_BINARY)
+
     def on_message(self, ws, message):
         try:
             messageSplit = message.split(",", 1)
@@ -185,15 +200,8 @@ class WhatsApp:
                         if self.sessionExists is False:
                             self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
                         self.saveSession(jsonObj[1])
-                        # self.subscribe()
-                        print("Sending message")
-                        msg =  '["action", {"add": "relay"}, [{"status": "ERROR", "message": {"conversation": "Please welcome Amogh to Buddy Riders BR2"}, "key": {"remoteJid": "919472458688@s.whatsapp.net", "fromMe": true, "id": "CEB42888A283B1F8384A76E76944213D"}, "messageTimestamp": "1560679082"}]]'
-                        jsonNode = json.loads(msg)
-                        strdata = whatsappWriteBinary(jsonNode)
-                        encdata = AESEncrypt(self.encKey, strdata)
-                        print("encdata %s" % encdata)
-                        fmsg = "1560679082, " + encdata
-                        self.ws.send(fmsg)
+                        self.subscribe()
+                        self.sendTextMessage("917718994926", "Test message")
 
                     elif jsonObj[0] == "Cmd":
                         logging.info("Challenge received")
@@ -232,7 +240,7 @@ class WhatsApp:
         logging.info("ClientId %s" % self.clientId)
         messageTag = str(getTimestamp())
         message = messageTag + ',["admin","init",[0,3,2390],["Chromium at ' + datetime.datetime.now().isoformat() + '","Chromium"],"' + self.clientId + '",true]'
-        print(message)
+        logging.info(message)
         ws.send(message)
 
         if self.data is not None:
@@ -240,10 +248,10 @@ class WhatsApp:
             serverToken = self.data["serverToken"]
             messageTag = str(getTimestamp())
             message = ('%s,["admin","login","%s","%s","%s","takeover"]' % (messageTag, clientToken, serverToken, self.clientId))
-            print(message)
+            logging.info(message)
             ws.send(message)
         else:
-            print("No data")
+            logging.info("No data")
         
     
     def connect(self):

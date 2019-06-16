@@ -63,7 +63,7 @@ class WABinaryWriter:
         self.writeChildren(node[2]);
     
     def writeString(self, token, i=None):
-        if not isinstance(token, unicode):
+        if not isinstance(token, str):
             raise ValueError("invalid string");
 
         if not bool(i) and token == "c.us":
