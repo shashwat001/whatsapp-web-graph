@@ -1,10 +1,43 @@
 import logging
+from utilities import *
 
 # ['action', {'add': 'relay'}, [{u'status': u'ERROR', u'message': {u'conversation': u'Test'}, u'key': {u'remoteJid': u'3456345@s.whatsapp.net', u'fromMe': False, u'id': u'62EC04FB60FFBD8A284C28E823EE2D5E'}, u'messageTimestamp': u'1560598969'}]]
 class Worker:
 
-    def __init__(self):
-        a = None
+    wa = None
+    subscribeList = None
+    subscriberList = set()
+
+    def __init__(self, subscribeList):
+        self.subscribeList = subscribeList
+
+    def subscribe(self):
+        try:
+            with open(self.subscribeList) as f:
+                lineList = f.readlines()
+                for line in lineList:
+                    self.subscriberList.add(line)
+                    self.sendSubscribe(str.strip(line))
+        except:
+            logging.info("Subscribe list not present")
+
+    def addNewSubscribe(self, jid):
+        number = self.getUserIdIfUser(jid)
+        if number in self.subscriberList:
+            return
+        with open(self.subscribeList, "a+") as pFile:
+            pFile.write('%s\n' % number)
+        self.subscriberList.add(number)
+        self.sendSubscribe(number)
+
+        
+
+    def sendSubscribe(self, userId):
+        logging.info('Subsrcibing for %s' % userId)
+        messageTag = str(getTimestampMs())
+        message = ('%s,,["action", "presence", "subscribe", "%s@c.us"]' % (messageTag, userId))
+        logging.info(message)
+        self.wa.ws.send(message)
 
     def getUserIdIfUser(self, sender):
         jid = sender.split('@')[0]
@@ -18,6 +51,10 @@ class Worker:
     def handleConversation(self, sender, message):
         userId = self.getUserIdIfUser(sender)
         logging.info("UserId: %s, Message:%s" % (userId, message))
+        if message == "Add me":
+            self.addNewSubscribe(sender)
+
+
         
 
     def handleIfConversation(self, messageJson):

@@ -62,6 +62,7 @@ class WhatsApp:
     keepAliveTimer = None
     worker = None
     messageSentCount = 0
+    subscriberList = set()
 
     def __init__(self, worker):
         self.worker = worker
@@ -113,22 +114,6 @@ class WhatsApp:
                 data = json.load(file)
                 return data
         return None
-
-    def subscribe(self):
-        try:
-            with open(subscribeList) as f:
-                lineList = f.readlines()
-                for line in lineList:
-                    self.sendSubscribe(str.strip(line))
-        except:
-            logging.info("Subscribe list not present")
-
-    def sendSubscribe(self, userId):
-        logging.info('Subsrcibing for %s' % userId)
-        messageTag = str(getTimestampMs())
-        message = ('%s,,["action", "presence", "subscribe", "%s@c.us"]' % (messageTag, userId))
-        logging.info(message)
-        self.ws.send(message)
 
     def writePresenceToFile(self, userId, pType, pTime):
         with open(presenceFile, "a+") as pFile:
@@ -200,7 +185,7 @@ class WhatsApp:
                         if self.sessionExists is False:
                             self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
                         self.saveSession(jsonObj[1])
-                        self.subscribe()
+                        self.worker.subscribe()
                         self.sendTextMessage("917718994926", "Test message")
 
                     elif jsonObj[0] == "Cmd":
@@ -269,4 +254,6 @@ class WhatsApp:
 
 if __name__ == "__main__":
     logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message)s', level=logging.INFO)
-    WhatsApp(Worker()).connect()
+    iworker = Worker(subscribeList)
+    wa = WhatsApp(iworker).connect()
+    iworker.wa = wa
