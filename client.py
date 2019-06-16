@@ -12,12 +12,14 @@ import pyqrcode
 import io
 import random
 import logging
+import yaml
 from worker import Worker
 
 from utilities import *
 from threading import Timer
 from os.path import expanduser
 from whatsapp_binary_reader import whatsappReadBinary
+from whatsapp_binary_writer import whatsappWriteBinary
 
 try:
     import thread
@@ -183,7 +185,16 @@ class WhatsApp:
                         if self.sessionExists is False:
                             self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
                         self.saveSession(jsonObj[1])
-                        self.subscribe()
+                        # self.subscribe()
+                        print("Sending message")
+                        msg =  '["action", {"add": "relay"}, [{"status": "ERROR", "message": {"conversation": "Please welcome Amogh to Buddy Riders BR2"}, "key": {"remoteJid": "919472458688@s.whatsapp.net", "fromMe": true, "id": "CEB42888A283B1F8384A76E76944213D"}, "messageTimestamp": "1560679082"}]]'
+                        jsonNode = json.loads(msg)
+                        strdata = whatsappWriteBinary(jsonNode)
+                        encdata = AESEncrypt(self.encKey, strdata)
+                        print("encdata %s" % encdata)
+                        fmsg = "1560679082, " + encdata
+                        self.ws.send(fmsg)
+
                     elif jsonObj[0] == "Cmd":
                         logging.info("Challenge received")
                         cmdInfo = jsonObj[1]
