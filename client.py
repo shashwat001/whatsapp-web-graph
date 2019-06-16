@@ -144,6 +144,7 @@ class WhatsApp:
         self.worker.handleIfConversation(processedData)
 
     def sendTextMessage(self, number, text):
+        logging.info("sending message %s to %s" % (text, number))
         messageId = "3EB0"+binascii.hexlify(os.urandom(8)).upper()
         messageTag = str(getTimestamp())
         messageParams = {"key": {"fromMe": True, "remoteJid": number + "@s.whatsapp.net", "id": messageId},"messageTimestamp": getTimestamp(), "status": 1, "message": {"conversation": text}}
@@ -186,7 +187,6 @@ class WhatsApp:
                             self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
                         self.saveSession(jsonObj[1])
                         self.worker.subscribe()
-                        self.sendTextMessage("917718994926", "Test message")
 
                     elif jsonObj[0] == "Cmd":
                         logging.info("Challenge received")
@@ -255,5 +255,6 @@ class WhatsApp:
 if __name__ == "__main__":
     logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message)s', level=logging.INFO)
     iworker = Worker(subscribeList)
-    wa = WhatsApp(iworker).connect()
+    wa = WhatsApp(iworker)
     iworker.wa = wa
+    wa.connect()

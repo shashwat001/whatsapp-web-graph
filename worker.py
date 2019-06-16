@@ -12,14 +12,17 @@ class Worker:
         self.subscribeList = subscribeList
 
     def subscribe(self):
+        logging.info("Subscribe list: %s" % self.subscribeList)
         try:
+            lineList = None
             with open(self.subscribeList) as f:
                 lineList = f.readlines()
-                for line in lineList:
-                    self.subscriberList.add(line)
-                    self.sendSubscribe(str.strip(line))
+            for line in lineList:
+                self.subscriberList.add(line)
+                self.sendSubscribe(str.strip(line))
         except:
             logging.info("Subscribe list not present")
+            raise
 
     def addNewSubscribe(self, jid):
         number = self.getUserIdIfUser(jid)
@@ -53,7 +56,7 @@ class Worker:
         logging.info("UserId: %s, Message:%s" % (userId, message))
         if message == "Add me":
             self.addNewSubscribe(sender)
-            self.wa.sendTextMessage(sender, "Done")
+            self.wa.sendTextMessage(userId, "Done")
 
 
         
