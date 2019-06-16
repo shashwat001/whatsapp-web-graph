@@ -12,7 +12,6 @@ import pyqrcode
 import io
 import random
 import logging
-import yaml
 import binascii
 import ssl
 
