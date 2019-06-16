@@ -14,6 +14,7 @@ import random
 import logging
 import yaml
 import binascii
+import ssl
 
 from worker import Worker
 from random import Random
@@ -249,7 +250,7 @@ class WhatsApp:
                                 on_open = lambda ws: self.on_open(ws),
                                 header = { "Origin: https://web.whatsapp.com" })
 
-        self.ws.run_forever()
+        self.ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
 
 
 if __name__ == "__main__":
