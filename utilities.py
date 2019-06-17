@@ -7,6 +7,8 @@ from Crypto.Hash import SHA256
 import hashlib
 import hmac
 import os
+import pytz
+import datetime
 
 
 
@@ -19,7 +21,11 @@ def getTimestamp():
 def getTimestampMs():
 	return int(round(time.time() * 1000))
 
-
+def getTimeString(timezoneStr):
+    tz = pytz.timezone(timezoneStr)
+    fmt = '%Y-%m-%d %H:%M:%S'
+    tm = datetime.datetime.now(tz)
+    return tm.strftime(fmt)
 
 def mergeDicts(x, y):									# from https://stackoverflow.com/a/26853961
 	if x is None and y is None:

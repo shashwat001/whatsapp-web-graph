@@ -57,9 +57,6 @@ class Worker:
             self.addNewSubscribe(sender)
             # self.wa.sendTextMessage(userId, "Done")
 
-
-        
-
     def handleIfConversation(self, messageJson):
         logging.info("Worker %s" % messageJson)
         if isinstance(messageJson, list) and len(messageJson) > 2:
