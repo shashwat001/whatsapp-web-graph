@@ -241,7 +241,7 @@ class WhatsApp:
 
     def connect(self):
         self.initLocalParams()
-        # websocket.enableTrace(True)
+        websocket.enableTrace(True)
         self.ws = websocket.WebSocketApp("wss://w1.web.whatsapp.com/ws/",
                                 on_message = lambda ws,msg: self.on_message(ws, msg),
                                 on_error = lambda ws, msg: self.on_error(ws, msg),
