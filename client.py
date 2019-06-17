@@ -12,14 +12,12 @@ import pyqrcode
 import io
 import random
 import logging
-<<<<<<< Updated upstream
 import binascii
 import ssl
 
-=======
->>>>>>> Stashed changes
 from worker import Worker
 from random import Random
+from pytz import timezone, utc
 
 from utilities import *
 from threading import Timer
@@ -78,7 +76,7 @@ class WhatsApp:
             self.mydata['clientId'] = base64.b64encode(os.urandom(16))
             keySecret = os.urandom(32)
             self.mydata["keySecret"] = base64.b64encode(keySecret)
-            
+
         else:
             self.sessionExists = True
             self.mydata = self.data['myData']
@@ -178,7 +176,7 @@ class WhatsApp:
                     if self.sessionExists is False:
                         serverRef = json.loads(messageContent)["ref"]
                         qrCodeContents = serverRef + "," + base64.b64encode(self.publicKey.serialize()) + "," + self.clientId
-                        svgBuffer = io.BytesIO();											# from https://github.com/mnooner256/pyqrcode/issues/39#issuecomment-207621532
+                        svgBuffer = io.BytesIO();                                            # from https://github.com/mnooner256/pyqrcode/issues/39#issuecomment-207621532
                         img = pyqrcode.create(qrCodeContents, error='L')
                         img.svg(svgBuffer, scale=6, background="rgba(0,0,0,0.0)", module_color="#122E31", quiet_zone=0)
                         print(img.terminal(quiet_zone=1))
@@ -210,8 +208,6 @@ class WhatsApp:
                         self.writePresenceToFile(userId, presencetype, presenceTime)
                 elif isinstance(jsonObj, object):
                     status = jsonObj["status"]
-                        
-                            
 
         except:
             logging.info("Some error encountered")
@@ -240,8 +236,7 @@ class WhatsApp:
             ws.send(message)
         else:
             logging.info("No data")
-        
-    
+
     def connect(self):
         self.initLocalParams()
         # websocket.enableTrace(True)
@@ -254,9 +249,17 @@ class WhatsApp:
 
         self.ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
 
+def customTime(*args):
+    utc_dt = utc.localize(datetime.datetime.utcnow())
+    my_tz = timezone("Asia/Kolkata")
+    converted = utc_dt.astimezone(my_tz)
+    return converted.timetuple()
+
 
 if __name__ == "__main__":
-    logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message).300s', level=logging.INFO)
+    logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message).300s', level=logging.INFO, filemode='w')
+    logging.Formatter.converter = customTime
+
     iworker = Worker(subscribeList)
     wa = WhatsApp(iworker)
     iworker.wa = wa

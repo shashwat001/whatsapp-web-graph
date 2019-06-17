@@ -33,7 +33,6 @@ class Worker:
         self.subscriberList.add(number)
         self.sendSubscribe(number)
 
-        
 
     def sendSubscribe(self, userId):
         logging.info('Subsrcibing for %s' % userId)

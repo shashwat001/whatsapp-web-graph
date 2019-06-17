@@ -4,3 +4,4 @@ pycrypto
 pyqrcode
 protobuf
 mock
+pytz
