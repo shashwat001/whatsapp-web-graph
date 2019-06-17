@@ -147,12 +147,14 @@ class WhatsApp:
     def sendTextMessage(self, number, text):
         logging.info("sending message %s to %s" % (text, number))
         messageId = "3EB0"+binascii.hexlify(os.urandom(8)).upper()
+        logging.info("Message id %s" % messageId)
         messageTag = str(getTimestamp())
         messageParams = {"key": {"fromMe": True, "remoteJid": number + "@s.whatsapp.net", "id": messageId},"messageTimestamp": getTimestamp(), "status": 1, "message": {"conversation": text}}
         msgData = ["action", {"type": "relay", "epoch": str(self.messageSentCount)},[["message", None, WAWebMessageInfo.encode(messageParams)]]]
         encryptedMessage = WhatsAppEncrypt(self.encKey, self.macKey,whatsappWriteBinary(msgData))
         payload = bytearray(messageId) + bytearray(",") + bytearray(to_bytes(WAMetrics.MESSAGE, 1)) + bytearray([0x80]) + encryptedMessage
         self.messageSentCount = self.messageSentCount + 1
+        logging.info("Calling websocket")
         self.ws.send(payload, websocket.ABNF.OPCODE_BINARY)
 
     def on_message(self, ws, message):
