@@ -12,11 +12,12 @@ class TestClient(unittest.TestCase):
     """
     Test if get user id parsing userid properly if user is given
     """
-    @mock.patch('client.WhatsApp', autospec=True)
-    def test_setConnInfoParams(self, mock_whatsapp):
-        w = mock_whatsapp.return_value
-        w.setConnInfoParams('asdyhiajksdfghakjsdfgh')
-        print(w.secret.return_value)
+    @mock.patch('worker.Worker', autospec=True)
+    def test_setConnInfoParams(self, mock_worker):
+        w = mock_worker.return_value
+        wa = WhatsApp(w)
+        wa.setConnInfoParams('asdyhiajksdfghakjsdfgh')
+        print(w.secret)
 
 if __name__ == "__main__":
     unittest.main()

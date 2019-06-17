@@ -12,9 +12,12 @@ import pyqrcode
 import io
 import random
 import logging
+<<<<<<< Updated upstream
 import binascii
 import ssl
 
+=======
+>>>>>>> Stashed changes
 from worker import Worker
 from random import Random
 
@@ -241,7 +244,7 @@ class WhatsApp:
     
     def connect(self):
         self.initLocalParams()
-        websocket.enableTrace(True)
+        # websocket.enableTrace(True)
         self.ws = websocket.WebSocketApp("wss://w1.web.whatsapp.com/ws/",
                                 on_message = lambda ws,msg: self.on_message(ws, msg),
                                 on_error = lambda ws, msg: self.on_error(ws, msg),
@@ -253,7 +256,7 @@ class WhatsApp:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message)s', level=logging.INFO)
+    logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message).300s', level=logging.INFO)
     iworker = Worker(subscribeList)
     wa = WhatsApp(iworker)
     iworker.wa = wa
