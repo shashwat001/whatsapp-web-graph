@@ -5,33 +5,47 @@ from utilities import *
 class Worker:
 
     wa = None
-    subscribeList = None
-    subscriberList = set()
+    subscribeListFile = None
+    subscriberList = {}
+    subscriberId = None
+    isSubscribed = False
 
-    def __init__(self, subscribeList):
-        self.subscribeList = subscribeList
+    def __init__(self, subscribeListFile):
+        self.subscribeListFile = subscribeListFile
 
     def subscribe(self):
-        logging.info("Subscribe list: %s" % self.subscribeList)
+        if self.isSubscribed:
+            return
+        logging.info("Subscribe list file: %s" % self.subscribeListFile)
         try:
             lineList = None
-            with open(self.subscribeList) as f:
+            with open(self.subscribeListFile) as f:
                 lineList = f.readlines()
             for line in lineList:
-                self.subscriberList.add(line)
+                line = line.strip()
+                self.addToSubscriberList(line)
                 self.sendSubscribe(str.strip(line))
+                self.isSubscribed = True
         except:
             logging.info("Subscribe list not present")
             raise
 
+    def addToSubscriberList(self, number):
+        self.subscriberId = getNextLexicographicString(self.subscriberId)
+        self.subscriberList[number] = self.subscriberId
+        logging.info("Subscriberid for %s is %s" % (number, self.subscriberList[number]))
+
     def addNewSubscribe(self, jid):
         number = self.getUserIdIfUser(jid)
         if number in self.subscriberList:
-            return
-        with open(self.subscribeList, "a+") as pFile:
+            logging.info("Subscriber already has presence")
+            return False
+        with open(self.subscribeListFile, "a+") as pFile:
             pFile.write('%s\n' % number)
-        self.subscriberList.add(number)
+        self.addToSubscriberList(number)
         self.sendSubscribe(number)
+        logging.info("Added the new subscriber")
+        return True
 
 
     def sendSubscribe(self, userId):
@@ -53,9 +67,21 @@ class Worker:
     def handleConversation(self, sender, message):
         userId = self.getUserIdIfUser(sender)
         logging.info("UserId: %s, Message:%s" % (userId, message))
-        if message == "Add me":
-            self.addNewSubscribe(sender)
-            # self.wa.sendTextMessage(userId, "Done")
+        if message != None and message.lower() == "add me":
+            isNewAdd = self.addNewSubscribe(sender)
+            time.sleep(2)
+            if isNewAdd:
+                self.wa.sendTextMessage(userId, "Done")
+            else:
+                self.wa.sendTextMessage(userId, "You are already added.")
+
+        if message != None and message.lower() == "who am i":
+            time.sleep(2)
+            if userId in self.subscriberList:
+                subscriberId = self.subscriberList[userId]
+                self.wa.sendTextMessage(userId, subscriberId)
+            else:
+                self.wa.sendTextMessage(userId, "Sorry you are not included in the list.")
 
     def handleIfConversation(self, messageJson):
         logging.info("Worker %s" % messageJson)

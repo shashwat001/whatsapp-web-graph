@@ -36,7 +36,7 @@ home = expanduser("~")
 settingsDir = home + "/.wweb"
 settingsFile = settingsDir + '/data.json'
 loggingDir = "./logs"
-subscribeList = settingsDir + '/subscribe.json'
+subscribeListFile = settingsDir + '/subscribe.json'
 presenceFile = settingsDir + '/presence.json'
 
 if not os.path.exists(settingsDir):
@@ -145,6 +145,8 @@ class WhatsApp:
         self.worker.handleIfConversation(processedData)
 
     def sendTextMessage(self, number, text):
+        message = "?,,"
+        self.ws.send(message)
         logging.info("sending message %s to %s" % (text, number))
         messageId = "3EB0"+binascii.hexlify(os.urandom(8)).upper()
         logging.info("Message id %s" % messageId)
@@ -262,7 +264,7 @@ if __name__ == "__main__":
     logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message).300s', level=logging.INFO, filemode='w')
     logging.Formatter.converter = customTime
 
-    iworker = Worker(subscribeList)
+    iworker = Worker(subscribeListFile)
     wa = WhatsApp(iworker)
     iworker.wa = wa
     wa.connect()
