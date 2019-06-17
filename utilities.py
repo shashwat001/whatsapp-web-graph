@@ -7,8 +7,9 @@ from Crypto.Hash import SHA256
 import hashlib
 import hmac
 import os
-import pytz
 import datetime
+
+from pytz import timezone, utc
 
 
 
@@ -22,7 +23,7 @@ def getTimestampMs():
 	return int(round(time.time() * 1000))
 
 def getTimeString(timezoneStr):
-    tz = pytz.timezone(timezoneStr)
+    tz = timezone(timezoneStr)
     fmt = '%Y-%m-%d %H:%M:%S'
     tm = datetime.datetime.now(tz)
     return tm.strftime(fmt)
@@ -124,3 +125,9 @@ def getNextLexicographicString(input):
     if carry == 1:
         output = output + 'A'
     return output[::-1]
+
+def customTime(*args):
+    utc_dt = utc.localize(datetime.datetime.utcnow())
+    my_tz = timezone("Asia/Kolkata")
+    converted = utc_dt.astimezone(my_tz)
+    return converted.timetuple()

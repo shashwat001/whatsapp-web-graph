@@ -17,7 +17,6 @@ import ssl
 
 from worker import Worker
 from random import Random
-from pytz import timezone, utc
 
 from utilities import *
 from threading import Timer
@@ -252,12 +251,6 @@ class WhatsApp:
                                 header = { "Origin: https://web.whatsapp.com" })
 
         self.ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
-
-def customTime(*args):
-    utc_dt = utc.localize(datetime.datetime.utcnow())
-    my_tz = timezone("Asia/Kolkata")
-    converted = utc_dt.astimezone(my_tz)
-    return converted.timetuple()
 
 
 if __name__ == "__main__":
