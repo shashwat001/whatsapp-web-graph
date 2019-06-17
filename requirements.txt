@@ -5,3 +5,5 @@ pyqrcode
 protobuf
 mock
 pytz
+matplotlib
+numpy
