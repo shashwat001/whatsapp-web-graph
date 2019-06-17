@@ -55,7 +55,7 @@ class Worker:
         logging.info("UserId: %s, Message:%s" % (userId, message))
         if message == "Add me":
             self.addNewSubscribe(sender)
-            self.wa.sendTextMessage(userId, "Done")
+            # self.wa.sendTextMessage(userId, "Done")
 
 
         
