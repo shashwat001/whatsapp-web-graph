@@ -2,6 +2,7 @@ from os.path import expanduser
 from utilities import *
 import logging
 from datetime import datetime
+from absl import flags
 
 import matplotlib
 import matplotlib.pyplot as plt; plt.rcdefaults()
@@ -10,11 +11,16 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 from matplotlib.dates import MinuteLocator
 
+
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string('usertype', "id", 'Type of name on y axis.')
+
 home = expanduser("~")
 settingsDir = home + "/.wweb"
 loggingDir = "./logs"
 presenceFile = settingsDir + '/presence.json'
-
 numberData = {}
 
 def printdiff(number, newTime):
@@ -41,13 +47,12 @@ def loadPresenceData():
         if number not in numberData:
             numberData[number] = {}
             numberData[number]['id'] = info[3]
-            numberData[number]['timesum'] = datetime.strptime("0:00:01", "%H:%M:%S")
+            numberData[number]['timesum'] = datetime.strptime("0:00:00", "%H:%M:%S")
         if 'timeinfo' not in numberData[number]:
             if pType == 'unavailable':
                 continue
             numberData[number]['timeinfo'] = {}
             numberData[number]['timeinfo']["atime"] = vTime
-            # print("Added: %s %s" % (number,numberData[number]['timeinfo']))
         elif pType == 'unavailable':
             assert('atime' in numberData[number]['timeinfo'])
             printdiff(number, vTime)
@@ -58,7 +63,10 @@ def loadPresenceData():
 def sortData():
     ar = []
     for k,v in numberData.iteritems():
-        ar.append((v['id'], convertToSeconds(v['timesum']),v['timesum'].strftime("%H:%M:%S")))
+        if FLAGS.usertype == "number":
+            ar.append((k, convertToSeconds(v['timesum']),v['timesum'].strftime("%H:%M:%S")))
+        else:
+            ar.append((v['id'], convertToSeconds(v['timesum']),v['timesum'].strftime("%H:%M:%S")))
     ar = sorted(ar, key=lambda x: x[1])
     y_pos = []
     x_pos = []
@@ -94,8 +102,10 @@ def generateGraph():
     plt.show()
 
 if __name__ == "__main__":
+    FLAGS(sys.argv)
     logging.basicConfig(filename=loggingDir+"/graph.log",format='%(asctime)s - %(message).300s', level=logging.INFO, filemode='w')
     logging.Formatter.converter = customTime
+    print(FLAGS.usertype)
 
     loadPresenceData()
     # sortData()
