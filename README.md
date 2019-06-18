@@ -9,7 +9,7 @@ whatsapp-web-graph is a reverse engineered whatsapp-web python application to ge
 ```
 pip install -r requirements.txt
 ```
-### For graphs
+#### For graphs
 ```
 sudo apt-get install python-tk
 ```
@@ -18,6 +18,13 @@ sudo apt-get install python-tk
 
 ```bash
 python client.py
+```
+
+## Graph generation
+
+To generate bar chart of the users and time spent by them on whatsapp.
+```
+python graph-presence.py
 ```
 
 ## Contributing
