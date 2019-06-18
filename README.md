@@ -9,6 +9,10 @@ whatsapp-web-graph is a reverse engineered whatsapp-web python application to ge
 ```
 pip install -r requirements.txt
 ```
+### For graphs
+```
+sudo apt-get install python-tk
+```
 
 ## Usage
 
