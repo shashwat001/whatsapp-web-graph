@@ -24,7 +24,8 @@ python client.py
 
 To generate bar chart of the users and time spent by them on whatsapp.
 
-<code>python graph-presence.py</code>
+<code>python graph-presence.py</code> or
+<code>python graph-presence.py --usertype=number</code>
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
