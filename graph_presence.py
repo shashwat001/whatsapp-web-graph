@@ -40,6 +40,7 @@ def loadPresenceData():
             continue
         if number not in numberData:
             numberData[number] = {}
+            numberData[number]['id'] = info[3]
             numberData[number]['timesum'] = datetime.strptime("0:00:01", "%H:%M:%S")
         if 'timeinfo' not in numberData[number]:
             if pType == 'unavailable':
@@ -57,7 +58,7 @@ def loadPresenceData():
 def sortData():
     ar = []
     for k,v in numberData.iteritems():
-        ar.append((k, convertToSeconds(v['timesum']),v['timesum'].strftime("%H:%M:%S")))
+        ar.append((v['id'], convertToSeconds(v['timesum']),v['timesum'].strftime("%H:%M:%S")))
     ar = sorted(ar, key=lambda x: x[1])
     y_pos = []
     x_pos = []

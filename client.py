@@ -115,10 +115,6 @@ class WhatsApp:
                 return data
         return None
 
-    def writePresenceToFile(self, userId, pType, pTime):
-        with open(presenceFile, "a+") as pFile:
-            pFile.write('%s,%s,%s\n' % (userId, pType, str(pTime)))
-
     def setConnInfoParams(self, secret):
         self.secret = secret
         self.sharedSecret = self.privateKey.get_shared_key(curve25519.Public(secret[:32]), lambda a: a)
@@ -204,11 +200,7 @@ class WhatsApp:
                             logging.info('message %s' % message)
                             ws.send(message)
                     elif jsonObj[0] == "Presence":
-                        presenceInfo = jsonObj[1]
-                        userId = presenceInfo["id"]
-                        presencetype = presenceInfo["type"]
-                        presenceTime = getTimeString('Asia/Kolkata')
-                        self.writePresenceToFile(userId, presencetype, presenceTime)
+                        self.worker.writePresenceToFilefromJson(jsonObj[1])
                 elif isinstance(jsonObj, object):
                     status = jsonObj["status"]
 
@@ -257,7 +249,7 @@ if __name__ == "__main__":
     logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message).300s', level=logging.INFO, filemode='w')
     logging.Formatter.converter = customTime
 
-    iworker = Worker(subscribeListFile)
+    iworker = Worker(subscribeListFile, presenceFile)
     wa = WhatsApp(iworker)
     iworker.wa = wa
     wa.connect()

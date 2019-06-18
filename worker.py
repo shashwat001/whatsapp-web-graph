@@ -6,12 +6,14 @@ class Worker:
 
     wa = None
     subscribeListFile = None
+    presenceFile = None
     subscriberList = {}
     subscriberId = None
     isSubscribed = False
 
-    def __init__(self, subscribeListFile):
+    def __init__(self, subscribeListFile, presenceFile):
         self.subscribeListFile = subscribeListFile
+        self.presenceFile = presenceFile
 
     def subscribe(self):
         if self.isSubscribed:
@@ -54,6 +56,19 @@ class Worker:
         message = ('%s,,["action", "presence", "subscribe", "%s@c.us"]' % (messageTag, userId))
         logging.info(message)
         self.wa.ws.send(message)
+
+    def writePresenceToFilefromJson(self, presenceInfo):
+        userId = self.getUserIdIfUser(presenceInfo["id"])
+        presencetype = presenceInfo["type"]
+        presenceTime = getTimeString('Asia/Kolkata')
+        self.writePresenceToFile(userId, presencetype, presenceTime)
+
+    def writePresenceToFile(self, userId, pType, pTime):
+        with open(self.presenceFile, "a+") as pFile:
+            if userId in self.subscriberList:
+                pFile.write('%s,%s,%s,%s\n' % (userId, pType, str(pTime), self.subscriberList[userId]))
+            else:
+                pFile.write('%s,%s,%s,%s\n' % (userId, pType, str(pTime), "None"))
 
     def getUserIdIfUser(self, sender):
         jid = sender.split('@')[0]
