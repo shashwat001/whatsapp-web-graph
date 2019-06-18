@@ -1,5 +1,5 @@
 from os.path import expanduser
-from utilities import customTime
+from utilities import *
 import logging
 from datetime import datetime
 
@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt; plt.rcdefaults()
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
-from matplotlib.dates import HourLocator
+from matplotlib.dates import MinuteLocator
 
 home = expanduser("~")
 settingsDir = home + "/.wweb"
@@ -57,37 +57,39 @@ def loadPresenceData():
 def sortData():
     ar = []
     for k,v in numberData.iteritems():
-        ar.append((k, v['timesum']))
+        ar.append((k, convertToSeconds(v['timesum']),v['timesum'].strftime("%H:%M:%S")))
     ar = sorted(ar, key=lambda x: x[1])
     y_pos = []
     x_pos = []
+    timestring = []
+    print(ar)
     for l in ar:
         x_pos.append(l[0])
         y_pos.append(l[1])
-    return x_pos, y_pos
+        timestring.append(l[2])
+    return x_pos, y_pos, timestring
 
 def generateGraph():
-    objects, performance = sortData()
-    # objects = ('Python', 'C++', 'Java', 'Perl', 'Scala', 'Lisp')
-    y_pos = np.arange(len(objects))
-    # performance = [10,8,6,4,2,1]
+    people, times, timestring = sortData()
+    fig, ax = plt.subplots()
 
-    ax = plt.subplot()
-    plt.barh(y_pos, performance, align='center', alpha=0.5)
-    plt.yticks(y_pos, objects)
-    plt.xlabel('Time')
-    plt.title('User')
-    ax.xaxis.set_major_locator(HourLocator())
-    ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
-    plt.show()
+    # Example data
+    # people = ('Tom', 'Dick', 'Harry', 'Slim', 'Jim')
+    y_pos = np.arange(len(people))
+    error = np.random.rand(len(people))
 
-def genSO():
-    numbers, times = sortData()
-    y = times
-    ax = plt.subplot()
-    ax.barh(numbers, y, align='center', alpha=0.5)
-    ax.xaxis.set_major_locator(HourLocator())
-    ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
+    ax.barh(y_pos, times, xerr=error, align='center')
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(people)
+    ax.set_xlabel('Time Spent')
+    ax.get_xaxis().set_visible(False)
+
+    for i, v in enumerate(times):
+        print(i)
+        ax.text(v + 3, i, timestring[i], color='blue')
+    # ax.xaxis.set_major_locator(MinuteLocator())
+    # ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
+
     plt.show()
 
 if __name__ == "__main__":
@@ -99,5 +101,6 @@ if __name__ == "__main__":
     
     
     # print(numberData)
-    # generateGraph()
-    genSO()
+    generateGraph()
+    # genSO()
+

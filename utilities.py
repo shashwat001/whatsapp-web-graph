@@ -131,3 +131,6 @@ def customTime(*args):
     my_tz = timezone("Asia/Kolkata")
     converted = utc_dt.astimezone(my_tz)
     return converted.timetuple()
+
+def convertToSeconds(tm):
+    return tm.second + tm.minute*60 + tm.hour*60*60
