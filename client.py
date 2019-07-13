@@ -235,18 +235,18 @@ class WhatsApp:
     def connect(self):
         self.initLocalParams()
         websocket.enableTrace(True)
-        self.ws = websocket.WebSocketApp("wss://w1.web.whatsapp.com/ws/",
+        self.ws = websocket.WebSocketApp("wss://web.whatsapp.com/ws",
                                 on_message = lambda ws,msg: self.on_message(ws, msg),
                                 on_error = lambda ws, msg: self.on_error(ws, msg),
                                 on_close = lambda ws: self.on_close(ws),
                                 on_open = lambda ws: self.on_open(ws),
                                 header = { "Origin: https://web.whatsapp.com" })
 
-        self.ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
+        self.ws.run_forever()
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename=loggingDir+"/info.log",format='%(asctime)s - %(message).300s', level=logging.INFO, filemode='w')
+    logging.basicConfig(filename=loggingDir+"/info.log",format='[%(asctime)s] {%(filename)s:%(lineno)d} - %(message).300s', level=logging.INFO, filemode='w')
     logging.Formatter.converter = customTime
 
     iworker = Worker(subscribeListFile, presenceFile)
