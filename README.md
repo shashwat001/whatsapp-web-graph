@@ -20,6 +20,15 @@ sudo apt-get install python-tk
 python client.py
 ```
 
+The config and log directory is `````~/.wweb`````. To subscribe to specific numbers, add a file `````~/.wweb/subscribe.json````` and add numbers one in each line as follows:
+```
+9193XXXXXXX
+919583XXXXX
+```
+
+The logs are put in ```~/.wweb/logs/info.log```  
+The online and offline info of subscribers are put in ```~/.wweb/presence.json```
+
 ## Graph generation
 
 To generate bar chart of the users and time spent by them on whatsapp.
