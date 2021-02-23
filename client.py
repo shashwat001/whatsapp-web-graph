@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 # WS client example
 
@@ -25,6 +25,8 @@ from whatsapp_binary_reader import whatsappReadBinary
 from whatsapp_binary_writer import whatsappWriteBinary
 from whatsapp_defines import *;
 
+WHATSAPP_WEB_VERSION="0,4,2081"
+
 try:
     import thread
 except ImportError:
@@ -34,7 +36,7 @@ import time
 home = expanduser("~")
 settingsDir = home + "/.wweb"
 settingsFile = settingsDir + '/data.json'
-loggingDir = "./logs"
+loggingDir = settingsDir + "/logs"
 subscribeListFile = settingsDir + '/subscribe.json'
 presenceFile = settingsDir + '/presence.json'
 
@@ -158,7 +160,7 @@ class WhatsApp:
         try:
             messageSplit = message.split(",", 1)
             if len(messageSplit) == 1:
-                logging.info('Single index message: %s', message)
+                logging.info(message)
                 return
             messageTag = messageSplit[0]
             messageContent = messageSplit[1]
@@ -218,7 +220,7 @@ class WhatsApp:
         logging.info("Socket Opened")
         logging.info("ClientId %s" % self.clientId)
         messageTag = str(getTimestamp())
-        message = messageTag + ',["admin","init",[0,3,2390],["Chromium at ' + datetime.datetime.now().isoformat() + '","Chromium"],"' + self.clientId + '",true]'
+        message = messageTag + ',["admin","init",[' + WHATSAPP_WEB_VERSION + '],["Chromium at ' + datetime.datetime.now().isoformat() + '","Chromium"],"' + self.clientId + '",true]'
         logging.info(message)
         ws.send(message)
 
@@ -234,7 +236,7 @@ class WhatsApp:
 
     def connect(self):
         self.initLocalParams()
-        websocket.enableTrace(True)
+        # websocket.enableTrace(True)
         self.ws = websocket.WebSocketApp("wss://web.whatsapp.com/ws",
                                 on_message = lambda ws,msg: self.on_message(ws, msg),
                                 on_error = lambda ws, msg: self.on_error(ws, msg),
@@ -246,7 +248,7 @@ class WhatsApp:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename=loggingDir+"/info.log",format='[%(asctime)s] {%(filename)s:%(lineno)d} - %(message).300s', level=logging.INFO, filemode='w')
+    logging.basicConfig(filename=loggingDir+"/info.log",format='[%(asctime)s] {%(filename)s:%(lineno)d} - %(message).300s', level=logging.INFO, filemode='a')
     logging.Formatter.converter = customTime
 
     iworker = Worker(subscribeListFile, presenceFile)

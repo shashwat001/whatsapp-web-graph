@@ -72,7 +72,7 @@ class Worker:
 
     def getUserIdIfUser(self, sender):
         jid = sender.split('@')[0]
-        logging.info("Jid: %s" % jid)
+        logging.debug("Jid: %s" % jid)
         splitList = jid.split('-')
         if len(splitList) > 1:
             logging.info("Seems message from group: %s" % sender)
