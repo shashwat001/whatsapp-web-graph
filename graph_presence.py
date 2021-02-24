@@ -19,7 +19,10 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string('usertype', "id", 'Type of name on y axis.')
 flags.DEFINE_string('timeafter', None, 'Starttime for the graph.')
-flags.DEFINE_boolean('skip_graph', False, 'Whether to avoid graph pop up.')
+flags.DEFINE_boolean('skip_graph', False, 'Whether to avoid graph pop up.',
+                     short_name='s')
+flags.DEFINE_integer('ignore_difference_sec', 0, 'Time difference to keep '
+                                                 'online.', short_name='i')
 
 home = expanduser("~")
 settingsDir = home + "/.wweb"
@@ -41,6 +44,10 @@ def adddiff(number, newTime):
     oldTime = numberData[number].currentOnlineTime
     tdelta = getTimeDifference(newTime, oldTime)
     print("Number: %s, Difference: %s" % (number, tdelta))
+    add_time_difference(number, tdelta)
+
+
+def add_time_difference(number, tdelta):
     numberData[number].totalOnline = numberData[number].totalOnline + tdelta
 
 
@@ -76,12 +83,17 @@ def loadPresenceData():
         if numberData[number].currentOnlineTime is None:
             if pType == 'unavailable':
                 continue
+            if pType == 'available' and numberData[number].lastOfflineTime is not None:
+                    difference_last_offline = getTimeDifference(vTime, numberData[
+                        number].lastOfflineTime)
+                    if difference_last_offline.seconds <= FLAGS.ignore_difference_sec:
+                        add_time_difference(number, difference_last_offline)
             numberData[number].currentOnlineTime = vTime
         elif pType == 'unavailable':
             assert (numberData[number].currentOnlineTime is not None)
             adddiff(number, vTime)
-            numberData[number].currentOnlineTime = None
             numberData[number].lastOfflineTime = vTime
+            numberData[number].currentOnlineTime = None
         else:
             continue
 
