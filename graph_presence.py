@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from os.path import expanduser
 from utilities import *
 import logging
@@ -5,17 +7,19 @@ from datetime import datetime
 from absl import flags
 
 import matplotlib
-import matplotlib.pyplot as plt; plt.rcdefaults()
+import matplotlib.pyplot as plt;
+
+plt.rcdefaults()
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 from matplotlib.dates import MinuteLocator
 
-
-
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('usertype', "id", 'Type of name on y axis.')
+flags.DEFINE_string('timeafter', None, 'Starttime for the graph.')
+flags.DEFINE_boolean('skip_graph', False, 'Whether to avoid graph pop up.')
 
 home = expanduser("~")
 settingsDir = home + "/.wweb"
@@ -23,14 +27,30 @@ loggingDir = "./logs"
 presenceFile = settingsDir + '/presence.json'
 numberData = {}
 
-def printdiff(number, newTime):
-    oldTime = numberData[number]['timeinfo']["atime"]
+
+class OnlineInfo:
+
+    def __init__(self):
+        self.id = None
+        self.currentOnlineTime = None
+        self.lastOfflineTime = None
+        self.totalOnline = 0
+
+
+def adddiff(number, newTime):
+    oldTime = numberData[number].currentOnlineTime
+    tdelta = getTimeDifference(newTime, oldTime)
+    print("Number: %s, Difference: %s" % (number, tdelta))
+    numberData[number].totalOnline = numberData[number].totalOnline + tdelta
+
+
+def getTimeDifference(newTime, oldTime):
     FMT = '%Y-%m-%d %H:%M:%S'
     # print("Old time: %s" % oldTime)
     # print("New time: %s" % newTime)
     tdelta = datetime.strptime(newTime, FMT) - datetime.strptime(oldTime, FMT)
-    print("Number: %s, Difference: %s" % (number,tdelta))
-    numberData[number]['timesum'] = numberData[number]['timesum'] + tdelta
+    return tdelta
+
 
 def loadPresenceData():
     with open(presenceFile) as f:
@@ -42,41 +62,51 @@ def loadPresenceData():
         pType = info[1]
         vTime = info[2]
 
+        if (FLAGS.timeafter is not None) and (vTime < FLAGS.timeafter):
+            continue
+
         if pType == 'composing':
             continue
         if number not in numberData:
-            numberData[number] = {}
-            numberData[number]['id'] = info[3]
-            numberData[number]['timesum'] = datetime.strptime("0:00:00", "%H:%M:%S")
-        if 'timeinfo' not in numberData[number]:
+            onlineInfo = OnlineInfo()
+            onlineInfo.id = info[3]
+            onlineInfo.totalOnline = datetime.strptime("0:00:00", "%H:%M:%S")
+            numberData[number] = onlineInfo
+
+        if numberData[number].currentOnlineTime is None:
             if pType == 'unavailable':
                 continue
-            numberData[number]['timeinfo'] = {}
-            numberData[number]['timeinfo']["atime"] = vTime
+            numberData[number].currentOnlineTime = vTime
         elif pType == 'unavailable':
-            assert('atime' in numberData[number]['timeinfo'])
-            printdiff(number, vTime)
-            numberData[number].pop('timeinfo')
+            assert (numberData[number].currentOnlineTime is not None)
+            adddiff(number, vTime)
+            numberData[number].currentOnlineTime = None
+            numberData[number].lastOfflineTime = vTime
         else:
             continue
 
+
 def sortData():
     ar = []
-    for k,v in numberData.iteritems():
+    for k, v in numberData.iteritems():
         if FLAGS.usertype == "number":
-            ar.append((k, convertToSeconds(v['timesum']),v['timesum'].strftime("%H:%M:%S")))
+            ar.append(
+                (k, convertToSeconds(v.totalOnline), v.totalOnline.strftime(
+                    "%H:%M:%S")))
         else:
-            ar.append((v['id'], convertToSeconds(v['timesum']),v['timesum'].strftime("%H:%M:%S")))
+            ar.append((v.id, convertToSeconds(v.totalOnline),
+                       v.totalOnline.strftime(
+                           "%H:%M:%S")))
     ar = sorted(ar, key=lambda x: x[1])
     y_pos = []
     x_pos = []
     timestring = []
-    print(ar)
     for l in ar:
         x_pos.append(l[0])
         y_pos.append(l[1])
         timestring.append(l[2])
     return x_pos, y_pos, timestring
+
 
 def generateGraph():
     people, times, timestring = sortData()
@@ -94,24 +124,26 @@ def generateGraph():
     ax.get_xaxis().set_visible(False)
 
     for i, v in enumerate(times):
-        print(i)
         ax.text(v + 3, i, timestring[i], color='blue')
     # ax.xaxis.set_major_locator(MinuteLocator())
     # ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
 
     plt.show()
 
+
 if __name__ == "__main__":
     FLAGS(sys.argv)
-    logging.basicConfig(filename=loggingDir+"/graph.log",format='%(asctime)s - %(message).300s', level=logging.INFO, filemode='w')
+    logging.basicConfig(filename=loggingDir + "/graph.log",
+                        format='%(asctime)s - %(message).300s',
+                        level=logging.INFO, filemode='w')
     logging.Formatter.converter = customTime
     print(FLAGS.usertype)
+    print(FLAGS.timeafter)
 
     loadPresenceData()
     # sortData()
-    
-    
-    # print(numberData)
-    generateGraph()
-    # genSO()
 
+    # print(numberData)
+    if not FLAGS.skip_graph:
+        generateGraph()
+    # genSO()
