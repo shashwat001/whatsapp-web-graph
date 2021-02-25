@@ -5,6 +5,7 @@ from utilities import *
 import logging
 from datetime import datetime
 from absl import flags
+from absl import app
 
 import matplotlib
 import matplotlib.pyplot as plt;
@@ -143,7 +144,7 @@ def generateGraph():
     plt.show()
 
 
-if __name__ == "__main__":
+def main(argv):
     FLAGS(sys.argv)
     logging.basicConfig(filename=loggingDir + "/graph.log",
                         format='%(asctime)s - %(message).300s',
@@ -159,3 +160,6 @@ if __name__ == "__main__":
     if not FLAGS.skip_graph:
         generateGraph()
     # genSO()
+
+if __name__ == "__main__":
+   app.run(main)
