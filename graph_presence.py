@@ -19,7 +19,8 @@ from matplotlib.dates import MinuteLocator
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('usertype', "id", 'Type of name on y axis.')
-flags.DEFINE_string('timeafter', None, 'Starttime for the graph.')
+flags.DEFINE_string('timeafter', None, 'Starttime for the graph.', short_name='a')
+flags.DEFINE_string('timebefore', None, 'Endtime for the graph.', short_name='b')
 flags.DEFINE_boolean('skip_graph', False, 'Whether to avoid graph pop up.',
                      short_name='s')
 flags.DEFINE_integer('ignore_difference_sec', 0, 'Time difference to keep '
@@ -71,6 +72,9 @@ def loadPresenceData():
         vTime = info[2]
 
         if (FLAGS.timeafter is not None) and (vTime < FLAGS.timeafter):
+            continue
+
+        if (FLAGS.timebefore is not None) and (vTime > FLAGS.timebefore):
             continue
 
         if pType == 'composing':
