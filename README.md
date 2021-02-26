@@ -37,8 +37,9 @@ To generate bar chart of the users and time spent by them on whatsapp.
 <code>python graph-presence.py</code> or <br>
 - Following arguments can be passed 
   - --usertype=number - To show actual number instead of alias in graph
-  - --timeafter=\<time string in yyyy-mm-dd hh-mm-ss\> To consider time after given time
-  - --skip_graph to skip generating graph and only display stdout
+  - --timeafter/-a \<time string in yyyy-mm-dd hh-mm-ss\> To consider time after given time
+  - --timebefore/-b \<time string in yyyy-mm-dd hh-mm-ss\> To consider time before given time
+  - --skip_graph/-s to skip generating graph and only display stdout
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
