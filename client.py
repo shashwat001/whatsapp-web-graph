@@ -56,6 +56,7 @@ class WhatsApp:
   keepAliveTimer = None
 
   #subscribeTimer is required as whatsapp unsubscribes by itself every 12 hours
+  subscribeStarted = False
   subscribeTimer = None
   worker = None
   messageSentCount = 0
@@ -193,7 +194,9 @@ class WhatsApp:
             if self.sessionExists is False:
               self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
             self.saveSession(jsonObj[1])
-            self.startSubscribeTimer()
+            if self.subscribeStarted is False:
+              self.startSubscribeTimer()
+              self.subscribeStarted = True
 
           elif jsonObj[0] == "Cmd":
             logging.info("Challenge received")
