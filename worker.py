@@ -16,8 +16,6 @@ class Worker:
         self.presenceFile = presenceFile
 
     def subscribe(self):
-        if self.isSubscribed:
-            return
         logging.info("Subscribe list file: %s" % self.subscribeListFile)
         try:
             lineList = None
@@ -27,7 +25,6 @@ class Worker:
                 line = line.strip()
                 self.addToSubscriberList(line)
                 self.sendSubscribe(str.strip(line))
-                self.isSubscribed = True
         except:
             logging.info("Subscribe list not present")
             raise

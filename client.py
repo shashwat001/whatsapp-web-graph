@@ -6,14 +6,12 @@ import base64
 import io
 import logging
 from os.path import expanduser
-import sys
 from threading import Timer
 
 import binascii
 import curve25519
 import pyqrcode
 import websocket
-import traceback
 
 from utilities import *
 from whatsapp_binary_reader import whatsappReadBinary
@@ -22,6 +20,11 @@ from whatsapp_defines import *;
 from worker import Worker
 
 WHATSAPP_WEB_VERSION = "0,4,2081"
+
+try:
+    import thread
+except ImportError:
+    import _thread as thread
 
 home = expanduser("~")
 settingsDir = home + "/.wweb"
@@ -51,6 +54,9 @@ class WhatsApp:
   mydata = {}
   sessionExists = False
   keepAliveTimer = None
+
+  #subscribeTimer is required as whatsapp unsubscribes by itself every 12 hours
+  subscribeTimer = None
   worker = None
   messageSentCount = 0
   subscriberList = set()
@@ -89,6 +95,13 @@ class WhatsApp:
       self.keepAliveTimer.cancel()
     self.keepAliveTimer = Timer(15, lambda: self.sendKeepAlive())
     self.keepAliveTimer.start()
+
+  def startSubscribeTimer(self):
+    self.worker.subscribe()
+    if self.subscribeTimer is not None:
+      self.subscribeTimer.cancel()
+    self.subscribeTimer = Timer(11*60*60, lambda: self.startSubscribeTimer())
+    self.subscribeTimer.start()
 
   def saveSession(self, jsonObj):
     jsonObj['myData'] = self.mydata
@@ -180,7 +193,7 @@ class WhatsApp:
             if self.sessionExists is False:
               self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
             self.saveSession(jsonObj[1])
-            self.worker.subscribe()
+            self.startSubscribeTimer()
 
           elif jsonObj[0] == "Cmd":
             logging.info("Challenge received")
@@ -228,17 +241,17 @@ class WhatsApp:
     else:
       logging.info("No data")
 
-    def connect(self):
-      self.initLocalParams()
-      # websocket.enableTrace(True)
-      self.ws = websocket.WebSocketApp("wss://web.whatsapp.com/ws",
-                                       on_message=lambda ws, msg: self.on_message(ws, msg),
-                                       on_error=lambda ws, msg: self.on_error(ws, msg),
-                                       on_close=lambda ws: self.on_close(ws),
-                                       on_open=lambda ws: self.on_open(ws),
-                                       header={"Origin: https://web.whatsapp.com"})
+  def connect(self):
+    self.initLocalParams()
+    # websocket.enableTrace(True)
+    self.ws = websocket.WebSocketApp("wss://web.whatsapp.com/ws",
+                                     on_message=lambda ws, msg: self.on_message(ws, msg),
+                                     on_error=lambda ws, msg: self.on_error(ws, msg),
+                                     on_close=lambda ws: self.on_close(ws),
+                                     on_open=lambda ws: self.on_open(ws),
+                                     header={"Origin: https://web.whatsapp.com"})
 
-      self.ws.run_forever()
+    self.ws.run_forever()
 
 
 if __name__ == "__main__":
