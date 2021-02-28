@@ -224,6 +224,11 @@ class WhatsApp:
 
   def on_close(self, ws):
     logging.info("### closed ###")
+    if self.subscribeTimer is not None:
+      self.subscribeTimer.cancel()
+    if self.keepAliveTimer is not None:
+      self.keepAliveTimer.cancel()
+    logging.info("Timers cancelled. Exiting.")
 
   def on_open(self, ws):
     logging.info("Socket Opened")
