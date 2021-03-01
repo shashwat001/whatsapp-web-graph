@@ -55,11 +55,9 @@ class WhatsApp:
   sessionExists = False
   keepAliveTimer = None
 
-  #subscribeTimer is required as whatsapp unsubscribes by itself every 12 hours
-  subscribeStarted = False
-  subscribeTimer = None
   worker = None
   messageSentCount = 0
+  subscribeStarted = False
   subscriberList = set()
 
   def __init__(self, worker):
@@ -96,13 +94,6 @@ class WhatsApp:
       self.keepAliveTimer.cancel()
     self.keepAliveTimer = Timer(15, lambda: self.sendKeepAlive())
     self.keepAliveTimer.start()
-
-  def startSubscribeTimer(self):
-    self.worker.subscribe()
-    if self.subscribeTimer is not None:
-      self.subscribeTimer.cancel()
-    self.subscribeTimer = Timer(12*60*60 + 5, lambda: self.startSubscribeTimer())
-    self.subscribeTimer.start()
 
   def saveSession(self, jsonObj):
     jsonObj['myData'] = self.mydata
@@ -195,7 +186,7 @@ class WhatsApp:
               self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
             self.saveSession(jsonObj[1])
             if self.subscribeStarted is False:
-              self.startSubscribeTimer()
+              self.worker.subscribe()
               self.subscribeStarted = True
 
           elif jsonObj[0] == "Cmd":
@@ -224,8 +215,6 @@ class WhatsApp:
 
   def on_close(self, ws):
     logging.info("### closed ###")
-    if self.subscribeTimer is not None:
-      self.subscribeTimer.cancel()
     if self.keepAliveTimer is not None:
       self.keepAliveTimer.cancel()
     logging.info("Timers cancelled. Exiting.")
@@ -258,7 +247,8 @@ class WhatsApp:
                                      on_close=lambda ws: self.on_close(ws),
                                      on_open=lambda ws: self.on_open(ws),
                                      header={"Origin: https://web.whatsapp.com"})
-
+    endTimer = Timer(11*60*60, lambda: self.ws.close())
+    endTimer.start()
     self.ws.run_forever()
 
 
