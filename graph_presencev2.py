@@ -25,6 +25,7 @@ flags.DEFINE_boolean('skip_graph', False, 'Whether to avoid graph pop up.',
                      short_name='s')
 flags.DEFINE_integer('ignore_difference_sec', -1, 'Time difference to keep '
                                                  'online.', short_name='i')
+flags.DEFINE_boolean('sum', False, 'Print total time online.')
 
 home = expanduser("~")
 settingsDir = home + "/.wweb"
@@ -40,12 +41,12 @@ class OnlineInfo:
     self.firstOnlineTime = None
     self.lastOfflineTime = None
     self.totalOnline = 0
-    self.isCurrentlyOnline = False
+    self.currentOnlineTime = None
 
 
 def adddiff(number, newTime, oldTime):
   tdelta = getTimeDifference(newTime, oldTime)
-  print("Number: %s, Difference: %s" % (number, tdelta))
+  print("Number: %s, %s to %s, Difference: %s" % (number, oldTime, newTime, tdelta))
   add_time_difference(number, tdelta)
 
 
@@ -87,7 +88,10 @@ def loadPresenceData():
 
 
     if pType == 'available':
-      numberObj.isCurrentlyOnline = True
+      if numberObj.currentOnlineTime is None:
+        numberObj.currentOnlineTime = vTime
+      else:
+        continue
       if numberObj.firstOnlineTime is None:
         numberObj.firstOnlineTime = vTime
       else:
@@ -101,10 +105,10 @@ def loadPresenceData():
             numberObj.firstOnlineTime = vTime
 
     elif pType == 'unavailable':
-      if numberObj.isCurrentlyOnline is False:
+      if numberObj.currentOnlineTime is None:
         continue
       numberObj.lastOfflineTime = vTime
-      numberObj.isCurrentlyOnline = False
+      numberObj.currentOnlineTime = None
     else:
       continue
 
@@ -164,6 +168,9 @@ def main(argv):
   loadPresenceData()
   if not FLAGS.skip_graph:
     generateGraph()
+  if FLAGS.sum:
+    for k, v in numberData.iteritems():
+      print("Number: %s, Time: %s" % (k, v.totalOnline.strftime("%H:%M:%S")))
 
 if __name__ == "__main__":
    app.run(main)
