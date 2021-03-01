@@ -101,7 +101,7 @@ class WhatsApp:
     self.worker.subscribe()
     if self.subscribeTimer is not None:
       self.subscribeTimer.cancel()
-    self.subscribeTimer = Timer(11*60*60, lambda: self.startSubscribeTimer())
+    self.subscribeTimer = Timer(12*60*60 + 5, lambda: self.startSubscribeTimer())
     self.subscribeTimer.start()
 
   def saveSession(self, jsonObj):
