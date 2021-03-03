@@ -18,19 +18,21 @@ class Worker:
     def subscribe(self):
         logging.info("Subscribe list file: %s" % self.subscribeListFile)
         try:
-            lineList = None
             with open(self.subscribeListFile) as f:
                 lineList = f.readlines()
             for line in lineList:
                 line = line.strip()
-                self.addToSubscriberList(line)
-                self.sendSubscribe(str.strip(line))
+                info = line.split(",")
+                number = info[0]
+                id = info[1]
+                self.addToSubscriberList(number, id)
+                self.sendSubscribe(str.strip(number))
         except:
             logging.info("Subscribe list not present")
             raise
 
-    def addToSubscriberList(self, number):
-        self.subscriberId = getNextLexicographicString(self.subscriberId)
+    def addToSubscriberList(self, number, id):
+        self.subscriberId = id
         self.subscriberList[number] = self.subscriberId
         logging.info("Subscriberid for %s is %s" % (number, self.subscriberList[number]))
 

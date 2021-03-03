@@ -85,6 +85,7 @@ class WhatsApp:
 
     if self.sessionExists:
       self.setConnInfoParams(base64.b64decode(self.data["secret"]))
+    self.subscribeStarted = False
 
   def sendKeepAlive(self):
     message = "?,,"
@@ -218,6 +219,7 @@ class WhatsApp:
     if self.keepAliveTimer is not None:
       self.keepAliveTimer.cancel()
     logging.info("Timers cancelled. Exiting.")
+    wa.connect()
 
   def on_open(self, ws):
     logging.info("Socket Opened")

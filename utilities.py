@@ -107,25 +107,6 @@ def AESDecrypt(key, ciphertext):						# from https://stackoverflow.com/a/2086826
     plaintext = cipher.decrypt(ciphertext[AES.block_size:])
     return AESUnpad(plaintext)
 
-def getNextLexicographicString(input):
-    if input is None or input == '':
-        return 'A'
-    sz = len(input)-1
-    output = ""
-    carry = 1
-    while sz>=0:
-        ch = chr(ord(input[sz])+carry)
-        if ch > 'Z':
-            carry = 1
-            ch = 'A'
-        else:
-            carry = 0
-        output = output + ch
-        sz = sz-1
-    if carry == 1:
-        output = output + 'A'
-    return output[::-1]
-
 def customTime(*args):
     utc_dt = utc.localize(datetime.datetime.utcnow())
     my_tz = timezone("Asia/Kolkata")
