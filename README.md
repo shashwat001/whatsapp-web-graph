@@ -41,6 +41,12 @@ To generate bar chart of the users and time spent by them on whatsapp.
   - --timebefore/-b \<time string in yyyy-mm-dd hh-mm-ss\> To consider time before given time
   - --skip_graph/-s to skip generating graph and only display stdout
 
+## Example
+
+- ./graph_presencev2.py -i 30 --usertype=number -a "2021-02-08 08:00:00"  -s --sum
+- ./graph_presencev2.py -i 30 --usertype=number -a "2021-03-01 07:00:00" -b "2021-03-01 20:00:00"
+- ./graph_presencev2.py
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
