@@ -3,7 +3,7 @@
 from os.path import expanduser
 from utilities import *
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from absl import flags
 from absl import app
 
@@ -27,6 +27,10 @@ flags.DEFINE_integer('ignore_difference_sec', -1, 'Time difference to keep '
                                                  'online.', short_name='i')
 flags.DEFINE_boolean('sum', False, 'Print total time online.')
 
+# Default offline delay below is manually observed value
+flags.DEFINE_integer('offline_delay', 14, 'Delay in seconds after offline status is received from actual offline',
+                     short_name='d')
+
 home = expanduser("~")
 settingsDir = home + "/.wweb"
 loggingDir = "./logs"
@@ -49,10 +53,12 @@ class OnlineInfo:
 class Graph:
   timeAfter = None
   timeBefore = None
+  offlineDelay = None
 
-  def __init__(self, timeAfter, timeBefore):
+  def __init__(self, timeAfter, timeBefore, offlineDelay):
     self.timeAfter = timeAfter
     self.timeBefore = timeBefore
+    self.offlineDelay = offlineDelay
 
   def adddiff(self, number, newTime, oldTime):
     tdelta = self.getTimeDifference(newTime, oldTime)
@@ -66,6 +72,8 @@ class Graph:
 
   def getTimeDifference(self, newTime, oldTime):
     tdelta = newTime - oldTime
+    if tdelta < timedelta(0):
+      return timedelta(0)
     return tdelta
 
 
@@ -109,7 +117,8 @@ class Graph:
             if difference_last_offline.seconds <= FLAGS.ignore_difference_sec:
               continue
             else:
-              self.adddiff(number, numberObj.lastOfflineTime, numberObj.firstOnlineTime)
+              estimatedOfflineTime = numberObj.lastOfflineTime - timedelta(seconds=self.offlineDelay)
+              self.adddiff(number, estimatedOfflineTime, numberObj.firstOnlineTime)
               numberObj.lastOfflineTime = None
               numberObj.firstOnlineTime = vTime
 
@@ -123,11 +132,13 @@ class Graph:
 
     for k, v in numberData.iteritems():
       if v.lastOfflineTime is not None and v.firstOnlineTime is not None:
-        self.adddiff(k, v.lastOfflineTime, v.firstOnlineTime)
+        estimatedOfflineTime = v.lastOfflineTime - timedelta(seconds=self.offlineDelay)
+        self.adddiff(k, estimatedOfflineTime, v.firstOnlineTime)
     for k, v in numberData.iteritems():
       if v.currentOnlineTime is not None:
-        print("Number: %s, Currently online from: %s, Difference: %s" % (k, v.currentOnlineTime, self.getTimeDifference(
-          datetime.now(), v.currentOnlineTime)))
+        print("Number: %s, Currently online from: %s, Difference: %s" % (k, v.currentOnlineTime,
+                                                                         str(self.getTimeDifference(
+          datetime.now(), v.currentOnlineTime)).split(".")[0]))
 
   def sortData(self):
     ar = []
@@ -148,7 +159,7 @@ class Graph:
 
 
   def generateGraph(self):
-    people, times, timestring = sortData()
+    people, times, timestring = self.sortData()
     fig, ax = plt.subplots()
 
     # Example data
@@ -185,7 +196,7 @@ def main(argv):
   if FLAGS.timebefore is not None:
     timeBefore = datetime.strptime(FLAGS.timebefore, FMT)
 
-  g = Graph(timeAfter, timeBefore)
+  g = Graph(timeAfter, timeBefore, FLAGS.offline_delay)
   g.loadPresenceData()
   if not FLAGS.skip_graph:
     g.generateGraph()
