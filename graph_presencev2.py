@@ -46,120 +46,128 @@ class OnlineInfo:
     self.currentOnlineTime = None
 
 
-def adddiff(number, newTime, oldTime):
-  tdelta = getTimeDifference(newTime, oldTime)
-  print("Number: %s, %s to %s, Difference: %s" % (number, oldTime, newTime, tdelta))
-  add_time_difference(number, tdelta)
+class Graph:
+  timeAfter = None
+  timeBefore = None
+
+  def __init__(self, timeAfter, timeBefore):
+    self.timeAfter = timeAfter
+    self.timeBefore = timeBefore
+
+  def adddiff(self, number, newTime, oldTime):
+    tdelta = self.getTimeDifference(newTime, oldTime)
+    print("Number: %s, %s to %s, Difference: %s" % (number, oldTime, newTime, tdelta))
+    self.add_time_difference(number, tdelta)
 
 
-def add_time_difference(number, tdelta):
-  numberData[number].totalOnline = numberData[number].totalOnline + tdelta
+  def add_time_difference(self, number, tdelta):
+    numberData[number].totalOnline = numberData[number].totalOnline + tdelta
 
 
-def getTimeDifference(newTime, oldTime):
-  tdelta = datetime.strptime(newTime, FMT) - datetime.strptime(oldTime, FMT)
-  return tdelta
+  def getTimeDifference(self, newTime, oldTime):
+    tdelta = newTime - oldTime
+    return tdelta
 
 
-def loadPresenceData():
-  with open(presenceFile) as f:
-    lineList = f.readlines()
-  for line in lineList:
-    line = line.strip()
-    info = line.split(",")
-    number = info[0]
-    pType = info[1]
-    vTime = info[2]
+  def loadPresenceData(self):
+    with open(presenceFile) as f:
+      lineList = f.readlines()
+    for line in lineList:
+      line = line.strip()
+      info = line.split(",")
+      number = info[0]
+      pType = info[1]
+      vTime = datetime.strptime(info[2], FMT)
 
-    if (FLAGS.timeafter is not None) and (vTime < FLAGS.timeafter):
+      if (self.timeAfter is not None) and (vTime < self.timeAfter):
+          continue
+
+      if (self.timeBefore is not None) and (vTime > self.timeBefore):
+          continue
+
+      if pType == 'composing':
         continue
+      if number not in numberData:
+        onlineInfo = OnlineInfo()
+        onlineInfo.id = info[3]
+        onlineInfo.totalOnline = datetime.strptime("0:00:00", "%H:%M:%S")
+        numberData[number] = onlineInfo
 
-    if (FLAGS.timebefore is not None) and (vTime > FLAGS.timebefore):
-        continue
-
-    if pType == 'composing':
-      continue
-    if number not in numberData:
-      onlineInfo = OnlineInfo()
-      onlineInfo.id = info[3]
-      onlineInfo.totalOnline = datetime.strptime("0:00:00", "%H:%M:%S")
-      numberData[number] = onlineInfo
-
-    numberObj = numberData[number]
+      numberObj = numberData[number]
 
 
-    if pType == 'available':
-      if numberObj.currentOnlineTime is None:
-        numberObj.currentOnlineTime = vTime
+      if pType == 'available':
+        if numberObj.currentOnlineTime is None:
+          numberObj.currentOnlineTime = vTime
+        else:
+          continue
+        if numberObj.firstOnlineTime is None:
+          numberObj.firstOnlineTime = vTime
+        else:
+          if numberObj.lastOfflineTime is not None:
+            difference_last_offline = self.getTimeDifference(vTime, numberObj.lastOfflineTime)
+            if difference_last_offline.seconds <= FLAGS.ignore_difference_sec:
+              continue
+            else:
+              self.adddiff(number, numberObj.lastOfflineTime, numberObj.firstOnlineTime)
+              numberObj.lastOfflineTime = None
+              numberObj.firstOnlineTime = vTime
+
+      elif pType == 'unavailable':
+        if numberObj.currentOnlineTime is None:
+          continue
+        numberObj.lastOfflineTime = vTime
+        numberObj.currentOnlineTime = None
       else:
         continue
-      if numberObj.firstOnlineTime is None:
-        numberObj.firstOnlineTime = vTime
+
+    for k, v in numberData.iteritems():
+      if v.lastOfflineTime is not None and v.firstOnlineTime is not None:
+        self.adddiff(k, v.lastOfflineTime, v.firstOnlineTime)
+    for k, v in numberData.iteritems():
+      if v.currentOnlineTime is not None:
+        print("Number: %s, Currently online from: %s, Difference: %s" % (k, v.currentOnlineTime, self.getTimeDifference(
+          datetime.now(), v.currentOnlineTime)))
+
+  def sortData(self):
+    ar = []
+    for k, v in numberData.iteritems():
+      if FLAGS.usertype == "number":
+        ar.append((k, convertToSeconds(v.totalOnline), v.totalOnline.strftime("%H:%M:%S")))
       else:
-        if numberObj.lastOfflineTime is not None:
-          difference_last_offline = getTimeDifference(vTime, numberObj.lastOfflineTime)
-          if difference_last_offline.seconds <= FLAGS.ignore_difference_sec:
-            continue
-          else:
-            adddiff(number, numberObj.lastOfflineTime, numberObj.firstOnlineTime)
-            numberObj.lastOfflineTime = None
-            numberObj.firstOnlineTime = vTime
-
-    elif pType == 'unavailable':
-      if numberObj.currentOnlineTime is None:
-        continue
-      numberObj.lastOfflineTime = vTime
-      numberObj.currentOnlineTime = None
-    else:
-      continue
-
-  for k, v in numberData.iteritems():
-    if v.lastOfflineTime is not None and v.firstOnlineTime is not None:
-      adddiff(k, v.lastOfflineTime, v.firstOnlineTime)
-  for k, v in numberData.iteritems():
-    if v.currentOnlineTime is not None:
-      print("Number: %s, Currently online from: %s, Difference: %s" % (k, v.currentOnlineTime, getTimeDifference(
-        datetime.now().strftime(FMT), v.currentOnlineTime)))
-
-def sortData():
-  ar = []
-  for k, v in numberData.iteritems():
-    if FLAGS.usertype == "number":
-      ar.append((k, convertToSeconds(v.totalOnline), v.totalOnline.strftime("%H:%M:%S")))
-    else:
-      ar.append((v.id, convertToSeconds(v.totalOnline), v.totalOnline.strftime("%H:%M:%S")))
-  ar = sorted(ar, key=lambda x: x[1])
-  y_pos = []
-  x_pos = []
-  timestring = []
-  for l in ar:
-    x_pos.append(l[0])
-    y_pos.append(l[1])
-    timestring.append(l[2])
-  return x_pos, y_pos, timestring
+        ar.append((v.id, convertToSeconds(v.totalOnline), v.totalOnline.strftime("%H:%M:%S")))
+    ar = sorted(ar, key=lambda x: x[1])
+    y_pos = []
+    x_pos = []
+    timestring = []
+    for l in ar:
+      x_pos.append(l[0])
+      y_pos.append(l[1])
+      timestring.append(l[2])
+    return x_pos, y_pos, timestring
 
 
-def generateGraph():
-  people, times, timestring = sortData()
-  fig, ax = plt.subplots()
+  def generateGraph(self):
+    people, times, timestring = sortData()
+    fig, ax = plt.subplots()
 
-  # Example data
-  # people = ('Tom', 'Dick', 'Harry', 'Slim', 'Jim')
-  y_pos = np.arange(len(people))
-  error = np.random.rand(len(people))
+    # Example data
+    # people = ('Tom', 'Dick', 'Harry', 'Slim', 'Jim')
+    y_pos = np.arange(len(people))
+    error = np.random.rand(len(people))
 
-  ax.barh(y_pos, times, xerr=error, align='center')
-  ax.set_yticks(y_pos)
-  ax.set_yticklabels(people)
-  ax.set_xlabel('Time Spent')
-  ax.get_xaxis().set_visible(False)
+    ax.barh(y_pos, times, xerr=error, align='center')
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(people)
+    ax.set_xlabel('Time Spent')
+    ax.get_xaxis().set_visible(False)
 
-  for i, v in enumerate(times):
-    ax.text(v + 3, i, timestring[i], color='blue')
-  # ax.xaxis.set_major_locator(MinuteLocator())
-  # ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
+    for i, v in enumerate(times):
+      ax.text(v + 3, i, timestring[i], color='blue')
+    # ax.xaxis.set_major_locator(MinuteLocator())
+    # ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
 
-  plt.show()
+    plt.show()
 
 
 def main(argv):
@@ -168,11 +176,19 @@ def main(argv):
                       format='%(asctime)s - %(message).300s',
                       level=logging.INFO, filemode='w')
   logging.Formatter.converter = customTime
-  print(FLAGS.usertype)
-  print(FLAGS.timeafter)
-  loadPresenceData()
+
+  timeAfter = None
+  timeBefore = None
+
+  if FLAGS.timeafter is not None:
+    timeAfter = datetime.strptime(FLAGS.timeafter, FMT)
+  if FLAGS.timebefore is not None:
+    timeBefore = datetime.strptime(FLAGS.timebefore, FMT)
+
+  g = Graph(timeAfter, timeBefore)
+  g.loadPresenceData()
   if not FLAGS.skip_graph:
-    generateGraph()
+    g.generateGraph()
   if FLAGS.sum:
     for k, v in numberData.iteritems():
       print("Number: %s, Time: %s" % (k, v.totalOnline.strftime("%H:%M:%S")))
