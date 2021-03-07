@@ -26,18 +26,6 @@ try:
 except ImportError:
     import _thread as thread
 
-home = expanduser("~")
-settingsDir = home + "/.wweb"
-settingsFile = settingsDir + '/data.json'
-loggingDir = settingsDir + "/logs"
-subscribeListFile = settingsDir + '/subscribe.json'
-presenceFile = settingsDir + '/presence.json'
-
-if not os.path.exists(settingsDir):
-  os.makedirs(settingsDir)
-if not os.path.exists(loggingDir):
-  os.makedirs(loggingDir)
-
 
 
 class WhatsApp:
@@ -59,9 +47,11 @@ class WhatsApp:
   messageSentCount = 0
   subscribeStarted = False
   subscriberList = set()
+  settingsFile = None
 
-  def __init__(self, worker):
+  def __init__(self, worker, settingsFile):
     self.worker = worker
+    self.settingsFile = settingsFile
 
   def initLocalParams(self):
     logging.info('Entering Initlocalparms')
@@ -102,12 +92,12 @@ class WhatsApp:
       for key, value in jsonObj.iteritems():
         self.data[key] = value
       jsonObj = self.data
-    with open(settingsFile, 'w') as outfile:
+    with open(self.settingsFile, 'w') as outfile:
       json.dump(jsonObj, outfile)
 
   def restoreSession(self):
-    if (os.path.exists(settingsFile)):
-      with open(settingsFile) as file:
+    if (os.path.exists(self.settingsFile)):
+      with open(self.settingsFile) as file:
         data = json.load(file)
         return data
     return None
@@ -255,12 +245,24 @@ class WhatsApp:
 
 
 if __name__ == "__main__":
+  home = expanduser("~")
+  settingsDir = home + "/.wweb"
+  settingsFile = settingsDir + '/data.json'
+  loggingDir = settingsDir + "/logs"
+  subscribeListFile = settingsDir + '/subscribe.json'
+  presenceFile = settingsDir + '/presence.json'
+
+  if not os.path.exists(settingsDir):
+    os.makedirs(settingsDir)
+  if not os.path.exists(loggingDir):
+    os.makedirs(loggingDir)
+
   logging.basicConfig(filename=loggingDir + "/info.log",
                       format='[%(asctime)s] {%(filename)s:%(lineno)d} - %(message).300s', level=logging.INFO,
                       filemode='a')
   logging.Formatter.converter = customTime
 
   iworker = Worker(subscribeListFile, presenceFile)
-  wa = WhatsApp(iworker)
+  wa = WhatsApp(iworker, settingsFile)
   iworker.wa = wa
   wa.connect()
