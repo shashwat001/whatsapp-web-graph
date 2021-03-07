@@ -33,6 +33,8 @@ loggingDir = "./logs"
 presenceFile = settingsDir + '/presence.json'
 numberData = {}
 
+FMT = '%Y-%m-%d %H:%M:%S'
+
 
 class OnlineInfo:
 
@@ -55,7 +57,6 @@ def add_time_difference(number, tdelta):
 
 
 def getTimeDifference(newTime, oldTime):
-  FMT = '%Y-%m-%d %H:%M:%S'
   tdelta = datetime.strptime(newTime, FMT) - datetime.strptime(oldTime, FMT)
   return tdelta
 
@@ -115,6 +116,10 @@ def loadPresenceData():
   for k, v in numberData.iteritems():
     if v.lastOfflineTime is not None and v.firstOnlineTime is not None:
       adddiff(k, v.lastOfflineTime, v.firstOnlineTime)
+  for k, v in numberData.iteritems():
+    if v.currentOnlineTime is not None:
+      print("Number: %s, Currently online from: %s, Difference: %s" % (k, v.currentOnlineTime, getTimeDifference(
+        datetime.now().strftime(FMT), v.currentOnlineTime)))
 
 def sortData():
   ar = []
