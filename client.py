@@ -251,6 +251,7 @@ if __name__ == "__main__":
   loggingDir = settingsDir + "/logs"
   subscribeListFile = settingsDir + '/subscribe.json'
   presenceFile = settingsDir + '/presence.json'
+  notificationList = settingsDir + '/notify.txt'
 
   if not os.path.exists(settingsDir):
     os.makedirs(settingsDir)
@@ -262,7 +263,7 @@ if __name__ == "__main__":
                       filemode='a')
   logging.Formatter.converter = customTime
 
-  iworker = Worker(subscribeListFile, presenceFile)
+  iworker = Worker(subscribeListFile, presenceFile, notificationList)
   wa = WhatsApp(iworker, settingsFile)
   iworker.wa = wa
   wa.connect()

@@ -8,7 +8,7 @@ from absl import flags
 from absl import app
 
 import matplotlib
-import matplotlib.pyplot as plt;
+import matplotlib.pyplot as plt
 
 plt.rcdefaults()
 import numpy as np
