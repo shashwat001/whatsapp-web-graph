@@ -54,11 +54,13 @@ class Graph:
   timeAfter = None
   timeBefore = None
   offlineDelay = None
+  printSum = False
 
-  def __init__(self, timeAfter, timeBefore, offlineDelay):
+  def __init__(self, timeAfter, timeBefore, offlineDelay, printSum):
     self.timeAfter = timeAfter
     self.timeBefore = timeBefore
     self.offlineDelay = offlineDelay
+    self.printSum = printSum
 
   def adddiff(self, number, newTime, oldTime):
     tdelta = self.getTimeDifference(newTime, oldTime)
@@ -117,8 +119,8 @@ class Graph:
             if difference_last_offline.seconds <= FLAGS.ignore_difference_sec:
               continue
             else:
-              estimatedOfflineTime = numberObj.lastOfflineTime - timedelta(seconds=self.offlineDelay)
-              self.adddiff(number, estimatedOfflineTime, numberObj.firstOnlineTime)
+              numberObj.lastOfflineTime = numberObj.lastOfflineTime - timedelta(seconds=self.offlineDelay)
+              self.adddiff(number, numberObj.lastOfflineTime, numberObj.firstOnlineTime)
               numberObj.lastOfflineTime = None
               numberObj.firstOnlineTime = vTime
 
@@ -132,13 +134,22 @@ class Graph:
 
     for k, v in numberData.iteritems():
       if v.lastOfflineTime is not None and v.firstOnlineTime is not None:
-        estimatedOfflineTime = v.lastOfflineTime - timedelta(seconds=self.offlineDelay)
-        self.adddiff(k, estimatedOfflineTime, v.firstOnlineTime)
+        v.lastOfflineTime = v.lastOfflineTime - timedelta(seconds=self.offlineDelay)
+        self.adddiff(k, v.lastOfflineTime, v.firstOnlineTime)
     for k, v in numberData.iteritems():
       if v.currentOnlineTime is not None:
         print("Number: %s, Currently online from: %s, Difference: %s" % (k, v.currentOnlineTime,
                                                                          str(self.getTimeDifference(
           datetime.now(), v.currentOnlineTime)).split(".")[0]))
+
+    if self.printSum:
+      for k, v in numberData.iteritems():
+        output = "Number: %s, Time: %s" % (k, v.totalOnline.strftime("%H:%M:%S"))
+        if v.currentOnlineTime is None:
+          output += ", Last online: {}".format(v.lastOfflineTime)
+        else:
+          output += ", Last online: now"
+        print(output)
 
   def sortData(self):
     ar = []
@@ -196,13 +207,10 @@ def main(argv):
   if FLAGS.timebefore is not None:
     timeBefore = datetime.strptime(FLAGS.timebefore, FMT)
 
-  g = Graph(timeAfter, timeBefore, FLAGS.offline_delay)
+  g = Graph(timeAfter, timeBefore, FLAGS.offline_delay, FLAGS.sum)
   g.loadPresenceData()
   if not FLAGS.skip_graph:
     g.generateGraph()
-  if FLAGS.sum:
-    for k, v in numberData.iteritems():
-      print("Number: %s, Time: %s" % (k, v.totalOnline.strftime("%H:%M:%S")))
 
 if __name__ == "__main__":
    app.run(main)
