@@ -3,12 +3,12 @@
 from os.path import expanduser
 from utilities import *
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from absl import flags
 from absl import app
 
 import matplotlib
-import matplotlib.pyplot as plt;
+import matplotlib.pyplot as plt
 
 plt.rcdefaults()
 import numpy as np
@@ -23,8 +23,13 @@ flags.DEFINE_string('timeafter', None, 'Starttime for the graph.', short_name='a
 flags.DEFINE_string('timebefore', None, 'Endtime for the graph.', short_name='b')
 flags.DEFINE_boolean('skip_graph', False, 'Whether to avoid graph pop up.',
                      short_name='s')
-flags.DEFINE_integer('ignore_difference_sec', 0, 'Time difference to keep '
+flags.DEFINE_integer('ignore_difference_sec', -1, 'Time difference to keep '
                                                  'online.', short_name='i')
+flags.DEFINE_boolean('sum', False, 'Print total time online.')
+
+# Default offline delay below is manually observed value
+flags.DEFINE_integer('offline_delay', 14, 'Delay in seconds after offline status is received from actual offline',
+                     short_name='d')
 
 home = expanduser("~")
 settingsDir = home + "/.wweb"
@@ -32,101 +37,140 @@ loggingDir = "./logs"
 presenceFile = settingsDir + '/presence.json'
 numberData = {}
 
+FMT = '%Y-%m-%d %H:%M:%S'
+
 
 class OnlineInfo:
 
-    def __init__(self):
-        self.id = None
-        self.currentOnlineTime = None
-        self.lastOfflineTime = None
-        self.totalOnline = 0
+  def __init__(self):
+    self.id = None
+    self.firstOnlineTime = None
+    self.lastOfflineTime = None
+    self.totalOnline = 0
+    self.currentOnlineTime = None
 
 
-def adddiff(number, newTime):
-    oldTime = numberData[number].currentOnlineTime
-    tdelta = getTimeDifference(newTime, oldTime)
-    print("Number: %s, Difference: %s" % (number, tdelta))
-    add_time_difference(number, tdelta)
+class Graph:
+  timeAfter = None
+  timeBefore = None
+  offlineDelay = None
+  printSum = False
+
+  def __init__(self, timeAfter, timeBefore, offlineDelay, printSum):
+    self.timeAfter = timeAfter
+    self.timeBefore = timeBefore
+    self.offlineDelay = offlineDelay
+    self.printSum = printSum
+
+  def adddiff(self, number, newTime, oldTime):
+    tdelta = self.getTimeDifference(newTime, oldTime)
+    print("Number: %s, %s to %s, Difference: %s" % (number, oldTime, newTime, tdelta))
+    self.add_time_difference(number, tdelta)
 
 
-def add_time_difference(number, tdelta):
+  def add_time_difference(self, number, tdelta):
     numberData[number].totalOnline = numberData[number].totalOnline + tdelta
 
 
-def getTimeDifference(newTime, oldTime):
-    FMT = '%Y-%m-%d %H:%M:%S'
-    # print("Old time: %s" % oldTime)
-    # print("New time: %s" % newTime)
-    tdelta = datetime.strptime(newTime, FMT) - datetime.strptime(oldTime, FMT)
+  def getTimeDifference(self, newTime, oldTime):
+    tdelta = newTime - oldTime
+    if tdelta < timedelta(0):
+      return timedelta(0)
     return tdelta
 
 
-def loadPresenceData():
+  def loadPresenceData(self):
     with open(presenceFile) as f:
-        lineList = f.readlines()
+      lineList = f.readlines()
     for line in lineList:
-        line = line.strip()
-        info = line.split(",")
-        number = info[0]
-        pType = info[1]
-        vTime = info[2]
+      line = line.strip()
+      info = line.split(",")
+      number = info[0]
+      pType = info[1]
+      vTime = datetime.strptime(info[2], FMT)
 
-        if (FLAGS.timeafter is not None) and (vTime < FLAGS.timeafter):
-            continue
+      if (self.timeAfter is not None) and (vTime < self.timeAfter):
+          continue
 
-        if (FLAGS.timebefore is not None) and (vTime > FLAGS.timebefore):
-            continue
+      if (self.timeBefore is not None) and (vTime > self.timeBefore):
+          continue
 
-        if pType == 'composing':
-            continue
-        if number not in numberData:
-            onlineInfo = OnlineInfo()
-            onlineInfo.id = info[3]
-            onlineInfo.totalOnline = datetime.strptime("0:00:00", "%H:%M:%S")
-            numberData[number] = onlineInfo
+      if pType == 'composing':
+        continue
+      if number not in numberData:
+        onlineInfo = OnlineInfo()
+        onlineInfo.id = info[3]
+        onlineInfo.totalOnline = datetime.strptime("0:00:00", "%H:%M:%S")
+        numberData[number] = onlineInfo
 
-        if numberData[number].currentOnlineTime is None:
-            if pType == 'unavailable':
-                continue
-            if pType == 'available' and numberData[number].lastOfflineTime is not None:
-                    difference_last_offline = getTimeDifference(vTime, numberData[
-                        number].lastOfflineTime)
-                    if difference_last_offline.seconds <= FLAGS.ignore_difference_sec:
-                        add_time_difference(number, difference_last_offline)
-            numberData[number].currentOnlineTime = vTime
-        elif pType == 'unavailable':
-            assert (numberData[number].currentOnlineTime is not None)
-            adddiff(number, vTime)
-            numberData[number].lastOfflineTime = vTime
-            numberData[number].currentOnlineTime = None
+      numberObj = numberData[number]
+
+
+      if pType == 'available':
+        if numberObj.currentOnlineTime is None:
+          numberObj.currentOnlineTime = vTime
         else:
-            continue
+          continue
+        if numberObj.firstOnlineTime is None:
+          numberObj.firstOnlineTime = vTime
+        else:
+          if numberObj.lastOfflineTime is not None:
+            difference_last_offline = self.getTimeDifference(vTime, numberObj.lastOfflineTime)
+            if difference_last_offline.seconds <= FLAGS.ignore_difference_sec:
+              continue
+            else:
+              numberObj.lastOfflineTime = numberObj.lastOfflineTime - timedelta(seconds=self.offlineDelay)
+              self.adddiff(number, numberObj.lastOfflineTime, numberObj.firstOnlineTime)
+              numberObj.lastOfflineTime = None
+              numberObj.firstOnlineTime = vTime
 
+      elif pType == 'unavailable':
+        if numberObj.currentOnlineTime is None:
+          continue
+        numberObj.lastOfflineTime = vTime
+        numberObj.currentOnlineTime = None
+      else:
+        continue
 
-def sortData():
+    for k, v in numberData.iteritems():
+      if v.lastOfflineTime is not None and v.firstOnlineTime is not None:
+        v.lastOfflineTime = v.lastOfflineTime - timedelta(seconds=self.offlineDelay)
+        self.adddiff(k, v.lastOfflineTime, v.firstOnlineTime)
+    for k, v in numberData.iteritems():
+      if v.currentOnlineTime is not None:
+        print("Number: %s, Currently online from: %s, Difference: %s" % (k, v.currentOnlineTime,
+                                                                         str(self.getTimeDifference(
+          datetime.now(), v.currentOnlineTime)).split(".")[0]))
+
+    if self.printSum:
+      for k, v in numberData.iteritems():
+        output = "Number: %s, Time: %s" % (k, v.totalOnline.strftime("%H:%M:%S"))
+        if v.currentOnlineTime is None:
+          output += ", Last online: {}".format(v.lastOfflineTime)
+        else:
+          output += ", Last online: now"
+        print(output)
+
+  def sortData(self):
     ar = []
     for k, v in numberData.iteritems():
-        if FLAGS.usertype == "number":
-            ar.append(
-                (k, convertToSeconds(v.totalOnline), v.totalOnline.strftime(
-                    "%H:%M:%S")))
-        else:
-            ar.append((v.id, convertToSeconds(v.totalOnline),
-                       v.totalOnline.strftime(
-                           "%H:%M:%S")))
+      if FLAGS.usertype == "number":
+        ar.append((k, convertToSeconds(v.totalOnline), v.totalOnline.strftime("%H:%M:%S")))
+      else:
+        ar.append((v.id, convertToSeconds(v.totalOnline), v.totalOnline.strftime("%H:%M:%S")))
     ar = sorted(ar, key=lambda x: x[1])
     y_pos = []
     x_pos = []
     timestring = []
     for l in ar:
-        x_pos.append(l[0])
-        y_pos.append(l[1])
-        timestring.append(l[2])
+      x_pos.append(l[0])
+      y_pos.append(l[1])
+      timestring.append(l[2])
     return x_pos, y_pos, timestring
 
 
-def generateGraph():
-    people, times, timestring = sortData()
+  def generateGraph(self):
+    people, times, timestring = self.sortData()
     fig, ax = plt.subplots()
 
     # Example data
@@ -141,7 +185,7 @@ def generateGraph():
     ax.get_xaxis().set_visible(False)
 
     for i, v in enumerate(times):
-        ax.text(v + 3, i, timestring[i], color='blue')
+      ax.text(v + 3, i, timestring[i], color='blue')
     # ax.xaxis.set_major_locator(MinuteLocator())
     # ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
 
@@ -149,21 +193,24 @@ def generateGraph():
 
 
 def main(argv):
-    FLAGS(sys.argv)
-    logging.basicConfig(filename=loggingDir + "/graph.log",
-                        format='%(asctime)s - %(message).300s',
-                        level=logging.INFO, filemode='w')
-    logging.Formatter.converter = customTime
-    print(FLAGS.usertype)
-    print(FLAGS.timeafter)
+  FLAGS(sys.argv)
+  logging.basicConfig(filename=loggingDir + "/graph.log",
+                      format='%(asctime)s - %(message).300s',
+                      level=logging.INFO, filemode='w')
+  logging.Formatter.converter = customTime
 
-    loadPresenceData()
-    # sortData()
+  timeAfter = None
+  timeBefore = None
 
-    # print(numberData)
-    if not FLAGS.skip_graph:
-        generateGraph()
-    # genSO()
+  if FLAGS.timeafter is not None:
+    timeAfter = datetime.strptime(FLAGS.timeafter, FMT)
+  if FLAGS.timebefore is not None:
+    timeBefore = datetime.strptime(FLAGS.timebefore, FMT)
+
+  g = Graph(timeAfter, timeBefore, FLAGS.offline_delay, FLAGS.sum)
+  g.loadPresenceData()
+  if not FLAGS.skip_graph:
+    g.generateGraph()
 
 if __name__ == "__main__":
    app.run(main)
