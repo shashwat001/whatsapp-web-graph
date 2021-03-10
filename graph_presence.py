@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 plt.rcdefaults()
 import numpy as np
 import matplotlib.pyplot as plt
+from operator import itemgetter
 from matplotlib.dates import DateFormatter
 from matplotlib.dates import MinuteLocator
 
@@ -143,13 +144,40 @@ class Graph:
           datetime.now(), v.currentOnlineTime)).split(".")[0]))
 
     if self.printSum:
-      for k, v in numberData.iteritems():
+      for k, v in iter(self.sort_dict(numberData, self.cmp_lastoffline_info)):
         output = "Number: %s, Time: %s" % (k, v.totalOnline.strftime("%H:%M:%S"))
         if v.currentOnlineTime is None:
           output += ", Last online: {}".format(v.lastOfflineTime)
         else:
           output += ", Last online: now"
         print(output)
+
+
+  def sort_dict(self, dict, comparison_func):
+    return sorted(dict.iteritems(), key=itemgetter(1),
+                  cmp=comparison_func)
+
+  def cmp_lastoffline_info(self, v1, v2):
+    if v1.currentOnlineTime is None and v2.currentOnlineTime is None:
+      if v1.lastOfflineTime is None:
+        return 1
+      if v2.lastOfflineTime is None:
+        return -1
+      if v1.lastOfflineTime < v2.lastOfflineTime:
+        return -1
+      return 1
+    if v1.currentOnlineTime is not None:
+      if v2.lastOfflineTime is None:
+        return -1
+      else:
+        return 1
+    if v2.currentOnlineTime is not None:
+      if v1.lastOfflineTime is None:
+        return 1
+      else:
+        return -1
+
+
 
   def sortData(self):
     ar = []
