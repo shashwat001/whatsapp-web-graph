@@ -36,7 +36,6 @@ home = expanduser("~")
 settingsDir = home + "/.wweb"
 loggingDir = "./logs"
 presenceFile = settingsDir + '/presence.json'
-numberData = {}
 
 FMT = '%Y-%m-%d %H:%M:%S'
 
@@ -58,6 +57,7 @@ class Graph:
   timeBefore = None
   offlineDelay = None
   printSum = False
+  numberData = {}
 
   def __init__(self, timeAfter, timeBefore, offlineDelay, printSum):
     self.timeAfter = timeAfter
@@ -74,7 +74,7 @@ class Graph:
 
 
   def add_time_difference(self, number, tdelta):
-    numberData[number].totalOnline = numberData[number].totalOnline + tdelta
+    self.numberData[number].totalOnline = self.numberData[number].totalOnline + tdelta
 
 
   def getTimeDifference(self, newTime, oldTime):
@@ -102,14 +102,14 @@ class Graph:
 
       if pType == 'composing':
         continue
-      if number not in numberData:
+      if number not in self.numberData:
         onlineInfo = OnlineInfo()
         onlineInfo.number = number
         onlineInfo.id = info[3]
         onlineInfo.totalOnline = datetime.strptime("0:00:00", "%H:%M:%S")
-        numberData[number] = onlineInfo
+        self.numberData[number] = onlineInfo
 
-      numberObj = numberData[number]
+      numberObj = self.numberData[number]
 
 
       if pType == 'available':
@@ -137,17 +137,17 @@ class Graph:
       else:
         continue
 
-    for k, v in numberData.iteritems():
+    for k, v in self.numberData.iteritems():
       if v.lastOfflineTime is not None and v.firstOnlineTime is not None:
-        self.onlineSessionComplete(numberData[k])
-    for k, v in numberData.iteritems():
+        self.onlineSessionComplete(self.numberData[k])
+    for k, v in self.numberData.iteritems():
       if v.currentOnlineTime is not None:
         print("Number: %s, Currently online from: %s, Difference: %s" % (k, v.currentOnlineTime,
                                                                          str(self.getTimeDifference(
           datetime.now(), v.currentOnlineTime)).split(".")[0]))
 
     if self.printSum:
-      for k, v in iter(self.sort_dict(numberData, self.cmp_lastoffline_info)):
+      for k, v in iter(self.sort_dict(self.numberData, self.cmp_lastoffline_info)):
         output = "Number: %s, Time: %s" % (k, v.totalOnline.strftime("%H:%M:%S"))
         if v.currentOnlineTime is None:
           output += ", Last online: {}".format(v.lastOfflineTime)
@@ -184,7 +184,7 @@ class Graph:
 
   def sortData(self):
     ar = []
-    for k, v in numberData.iteritems():
+    for k, v in self.numberData.iteritems():
       if FLAGS.usertype == "number":
         ar.append((k, convertToSeconds(v.totalOnline), v.totalOnline.strftime("%H:%M:%S")))
       else:
