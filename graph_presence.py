@@ -27,6 +27,7 @@ flags.DEFINE_boolean('skip_graph', False, 'Whether to avoid graph pop up.',
 flags.DEFINE_integer('ignore_difference_sec', -1, 'Time difference to keep '
                                                  'online.', short_name='i')
 flags.DEFINE_boolean('sum', False, 'Print total time online.')
+flags.DEFINE_integer('graph_type', 1, 'Graph type to show.', short_name='g')
 
 # Default offline delay below is manually observed value
 flags.DEFINE_integer('offline_delay', 14, 'Delay in seconds after offline status is received from actual offline',
@@ -67,10 +68,17 @@ class Graph:
 
   def onlineSessionComplete(self, numberObj):
     numberObj.lastOfflineTime = numberObj.lastOfflineTime - timedelta(seconds=self.offlineDelay)
+    numberObj.onlineCount +=1
     tdelta = self.getTimeDifference(numberObj.lastOfflineTime, numberObj.firstOnlineTime)
     print("Number: %s, %s to %s, Difference: %s" % (
       (numberObj.number), (numberObj.firstOnlineTime), (numberObj.lastOfflineTime), tdelta))
     self.add_time_difference(numberObj.number, tdelta)
+
+  def ongoingOnlineSession(self, numberObj):
+    numberObj.onlineCount +=1
+    print("Number: %s, Currently online from: %s, Difference: %s" %
+          (numberObj.number, numberObj.currentOnlineTime,
+           str(self.getTimeDifference(datetime.now(),numberObj.currentOnlineTime)).split(".")[0]))
 
 
   def add_time_difference(self, number, tdelta):
@@ -139,12 +147,10 @@ class Graph:
 
     for k, v in self.numberData.iteritems():
       if v.lastOfflineTime is not None and v.firstOnlineTime is not None:
-        self.onlineSessionComplete(self.numberData[k])
+        self.onlineSessionComplete(v)
     for k, v in self.numberData.iteritems():
       if v.currentOnlineTime is not None:
-        print("Number: %s, Currently online from: %s, Difference: %s" % (k, v.currentOnlineTime,
-                                                                         str(self.getTimeDifference(
-          datetime.now(), v.currentOnlineTime)).split(".")[0]))
+        self.ongoingOnlineSession(v)
 
     if self.printSum:
       for k, v in iter(self.sort_dict(self.numberData, self.cmp_lastoffline_info)):
@@ -182,13 +188,13 @@ class Graph:
 
 
 
-  def sortData(self):
+  def sortData(self, key=None, labels=None):
     ar = []
     for k, v in self.numberData.iteritems():
       if FLAGS.usertype == "number":
-        ar.append((k, convertToSeconds(v.totalOnline), v.totalOnline.strftime("%H:%M:%S")))
+        ar.append((k, key(v), labels(v)))
       else:
-        ar.append((v.id, convertToSeconds(v.totalOnline), v.totalOnline.strftime("%H:%M:%S")))
+        ar.append((v.id, key(v), labels(v)))
     ar = sorted(ar, key=lambda x: x[1])
     y_pos = []
     x_pos = []
@@ -201,7 +207,30 @@ class Graph:
 
 
   def generateGraph(self):
-    people, times, timestring = self.sortData()
+    people, times, timestring = self.sortData(key=lambda x: convertToSeconds(x.totalOnline),
+                                              labels= lambda x: x.totalOnline.strftime("%H:%M:%S"))
+    fig, ax = plt.subplots()
+
+    # Example data
+    # people = ('Tom', 'Dick', 'Harry', 'Slim', 'Jim')
+    y_pos = np.arange(len(people))
+    error = np.random.rand(len(people))
+
+    ax.barh(y_pos, times, xerr=error, align='center')
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(people)
+    ax.get_xaxis().set_visible(False)
+
+    for i, v in enumerate(times):
+      ax.text(v + 3, i, timestring[i], color='blue')
+    # ax.xaxis.set_major_locator(MinuteLocator())
+    # ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
+
+    plt.show()
+
+  def generateCountGraph(self):
+    people, times, timestring = self.sortData(key=lambda x: x.onlineCount,
+                                              labels= lambda x: x.onlineCount)
     fig, ax = plt.subplots()
 
     # Example data
@@ -241,7 +270,10 @@ def main(argv):
   g = Graph(timeAfter, timeBefore, FLAGS.offline_delay, FLAGS.sum)
   g.loadPresenceData()
   if not FLAGS.skip_graph:
-    g.generateGraph()
+    if FLAGS.graph_type is 1:
+      g.generateGraph()
+    if FLAGS.graph_type is 2:
+      g.generateCountGraph()
 
 if __name__ == "__main__":
    app.run(main)
