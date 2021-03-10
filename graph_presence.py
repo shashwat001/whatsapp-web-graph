@@ -44,11 +44,13 @@ FMT = '%Y-%m-%d %H:%M:%S'
 class OnlineInfo:
 
   def __init__(self):
+    self.number = None
     self.id = None
     self.firstOnlineTime = None
     self.lastOfflineTime = None
     self.totalOnline = 0
     self.currentOnlineTime = None
+    self.onlineCount = 0
 
 
 class Graph:
@@ -63,10 +65,12 @@ class Graph:
     self.offlineDelay = offlineDelay
     self.printSum = printSum
 
-  def adddiff(self, number, newTime, oldTime):
-    tdelta = self.getTimeDifference(newTime, oldTime)
-    print("Number: %s, %s to %s, Difference: %s" % (number, oldTime, newTime, tdelta))
-    self.add_time_difference(number, tdelta)
+  def onlineSessionComplete(self, numberObj):
+    numberObj.lastOfflineTime = numberObj.lastOfflineTime - timedelta(seconds=self.offlineDelay)
+    tdelta = self.getTimeDifference(numberObj.lastOfflineTime, numberObj.firstOnlineTime)
+    print("Number: %s, %s to %s, Difference: %s" % (
+      (numberObj.number), (numberObj.firstOnlineTime), (numberObj.lastOfflineTime), tdelta))
+    self.add_time_difference(numberObj.number, tdelta)
 
 
   def add_time_difference(self, number, tdelta):
@@ -100,6 +104,7 @@ class Graph:
         continue
       if number not in numberData:
         onlineInfo = OnlineInfo()
+        onlineInfo.number = number
         onlineInfo.id = info[3]
         onlineInfo.totalOnline = datetime.strptime("0:00:00", "%H:%M:%S")
         numberData[number] = onlineInfo
@@ -120,8 +125,7 @@ class Graph:
             if difference_last_offline.seconds <= FLAGS.ignore_difference_sec:
               continue
             else:
-              numberObj.lastOfflineTime = numberObj.lastOfflineTime - timedelta(seconds=self.offlineDelay)
-              self.adddiff(number, numberObj.lastOfflineTime, numberObj.firstOnlineTime)
+              self.onlineSessionComplete(numberObj)
               numberObj.lastOfflineTime = None
               numberObj.firstOnlineTime = vTime
 
@@ -135,8 +139,7 @@ class Graph:
 
     for k, v in numberData.iteritems():
       if v.lastOfflineTime is not None and v.firstOnlineTime is not None:
-        v.lastOfflineTime = v.lastOfflineTime - timedelta(seconds=self.offlineDelay)
-        self.adddiff(k, v.lastOfflineTime, v.firstOnlineTime)
+        self.onlineSessionComplete(numberData[k])
     for k, v in numberData.iteritems():
       if v.currentOnlineTime is not None:
         print("Number: %s, Currently online from: %s, Difference: %s" % (k, v.currentOnlineTime,
