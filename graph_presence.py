@@ -28,6 +28,7 @@ flags.DEFINE_integer('ignore_difference_sec', -1, 'Time difference to keep '
                                                  'online.', short_name='i')
 flags.DEFINE_boolean('sum', False, 'Print total time online.')
 flags.DEFINE_integer('graph_type', 1, 'Graph type to show.', short_name='g')
+flags.DEFINE_integer('duration', 60, 'Duration for graph type 3.', short_name='D')
 
 # Default offline delay below is manually observed value
 flags.DEFINE_integer('offline_delay', 14, 'Delay in seconds after offline status is received from actual offline',
@@ -51,6 +52,7 @@ class OnlineInfo:
     self.totalOnline = 0
     self.currentOnlineTime = None
     self.onlineCount = 0
+    self.durationFrequencyCount = 0
 
 
 class Graph:
@@ -59,6 +61,7 @@ class Graph:
   offlineDelay = None
   printSum = False
   numberData = {}
+  duration = None
 
   def __init__(self, timeAfter, timeBefore, offlineDelay, printSum):
     self.timeAfter = timeAfter
@@ -66,10 +69,12 @@ class Graph:
     self.offlineDelay = offlineDelay
     self.printSum = printSum
 
-  def onlineSessionComplete(self, numberObj):
+  def onlineSessionComplete(self, numberObj, addDurationFrequencyCount=False):
     numberObj.lastOfflineTime = numberObj.lastOfflineTime - timedelta(seconds=self.offlineDelay)
     numberObj.onlineCount +=1
     tdelta = self.getTimeDifference(numberObj.lastOfflineTime, numberObj.firstOnlineTime)
+    if self.duration is not None and tdelta.seconds >= self.duration:
+      numberObj.durationFrequencyCount += 1
     print("Number: %s, %s to %s, Difference: %s" % (
       (numberObj.number), (numberObj.firstOnlineTime), (numberObj.lastOfflineTime), tdelta))
     self.add_time_difference(numberObj.number, tdelta)
@@ -214,15 +219,14 @@ class Graph:
     # Example data
     # people = ('Tom', 'Dick', 'Harry', 'Slim', 'Jim')
     y_pos = np.arange(len(people))
-    error = np.random.rand(len(people))
 
-    ax.barh(y_pos, times, xerr=error, align='center')
+    ax.barh(y_pos, times, align='center')
     ax.set_yticks(y_pos)
     ax.set_yticklabels(people)
-    ax.get_xaxis().set_visible(False)
+    ax.set_xlabel('Time spent')
 
     for i, v in enumerate(times):
-      ax.text(v + 3, i, timestring[i], color='blue')
+      ax.text(v + 10, i - 0.1, timestring[i], color='blue')
     # ax.xaxis.set_major_locator(MinuteLocator())
     # ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
 
@@ -236,16 +240,35 @@ class Graph:
     # Example data
     # people = ('Tom', 'Dick', 'Harry', 'Slim', 'Jim')
     y_pos = np.arange(len(people))
-    error = np.random.rand(len(people))
 
-    ax.barh(y_pos, times, xerr=error, align='center')
+    ax.barh(y_pos, times,  align='center')
     ax.set_yticks(y_pos)
     ax.set_yticklabels(people)
-    ax.set_xlabel('Time Spent')
-    ax.get_xaxis().set_visible(False)
+    ax.set_xlabel('Time whatsapp opened')
 
     for i, v in enumerate(times):
-      ax.text(v + 3, i, timestring[i], color='blue')
+      ax.text(v + 0.5, i, timestring[i], color='blue')
+    # ax.xaxis.set_major_locator(MinuteLocator())
+    # ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
+
+    plt.show()
+
+  def generateDurationFrequencyGraph(self,margin):
+    people, times, timestring = self.sortData(key=lambda x: x.durationFrequencyCount,
+                                              labels= lambda x: x.durationFrequencyCount)
+    fig, ax = plt.subplots()
+
+    # Example data
+    # people = ('Tom', 'Dick', 'Harry', 'Slim', 'Jim')
+    y_pos = np.arange(len(people))
+
+    ax.barh(y_pos, times, align='center')
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(people)
+    ax.set_xlabel('Sessions more than {} seconds'.format(self.duration))
+
+    for i, v in enumerate(times):
+      ax.text(v + 0.5, i, timestring[i], color='blue')
     # ax.xaxis.set_major_locator(MinuteLocator())
     # ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
 
@@ -268,12 +291,18 @@ def main(argv):
     timeBefore = datetime.strptime(FLAGS.timebefore, FMT)
 
   g = Graph(timeAfter, timeBefore, FLAGS.offline_delay, FLAGS.sum)
+
+  if not FLAGS.skip_graph and FLAGS.graph_type is 3:
+    g.duration = FLAGS.duration
+
   g.loadPresenceData()
   if not FLAGS.skip_graph:
     if FLAGS.graph_type is 1:
       g.generateGraph()
     if FLAGS.graph_type is 2:
       g.generateCountGraph()
+    if FLAGS.graph_type is 3:
+      g.generateDurationFrequencyGraph(1)
 
 if __name__ == "__main__":
    app.run(main)
