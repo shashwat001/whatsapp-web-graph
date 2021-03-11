@@ -29,6 +29,7 @@ flags.DEFINE_integer('ignore_difference_sec', -1, 'Time difference to keep '
 flags.DEFINE_boolean('sum', False, 'Print total time online.')
 flags.DEFINE_integer('graph_type', 1, 'Graph type to show.', short_name='g')
 flags.DEFINE_integer('duration', 60, 'Duration for graph type 3.', short_name='D')
+flags.DEFINE_boolean('offline_interval', False, 'Interval for which user was offline.', short_name='o')
 
 # Default offline delay below is manually observed value
 flags.DEFINE_integer('offline_delay', 14, 'Delay in seconds after offline status is received from actual offline',
@@ -62,28 +63,47 @@ class Graph:
   printSum = False
   numberData = {}
   duration = None
+  offlineInterval = False
 
-  def __init__(self, timeAfter, timeBefore, offlineDelay, printSum):
+  def __init__(self, timeAfter, timeBefore, offlineDelay, printSum, offlineInterval):
     self.timeAfter = timeAfter
     self.timeBefore = timeBefore
     self.offlineDelay = offlineDelay
     self.printSum = printSum
+    self.offlineInterval = offlineInterval
 
-  def onlineSessionComplete(self, numberObj, addDurationFrequencyCount=False):
+  def onlineSessionComplete(self, numberObj):
     numberObj.lastOfflineTime = numberObj.lastOfflineTime - timedelta(seconds=self.offlineDelay)
     numberObj.onlineCount +=1
     tdelta = self.getTimeDifference(numberObj.lastOfflineTime, numberObj.firstOnlineTime)
     if self.duration is not None and tdelta.seconds >= self.duration:
       numberObj.durationFrequencyCount += 1
-    print("Number: %s, %s to %s, Difference: %s" % (
-      (numberObj.number), (numberObj.firstOnlineTime), (numberObj.lastOfflineTime), tdelta))
+
+    outputString = "Number: {:>12s}, {} to {}, Difference: {}".format(
+                    numberObj.number,
+                    numberObj.firstOnlineTime,
+                    numberObj.lastOfflineTime,
+                    tdelta)
+
+    if self.offlineInterval:
+      offlineInterval = None
+      if numberObj.currentOnlineTime is not None:
+        offlineInterval = numberObj.currentOnlineTime - numberObj.lastOfflineTime
+      else:
+        offlineInterval = datetime.now() - numberObj.lastOfflineTime
+      outputString += ", then offline for: {}".format(str(offlineInterval).split(".")[0])
+
+    print(outputString)
     self.add_time_difference(numberObj.number, tdelta)
 
   def ongoingOnlineSession(self, numberObj):
     numberObj.onlineCount +=1
-    print("Number: %s, Currently online from: %s, Difference: %s" %
-          (numberObj.number, numberObj.currentOnlineTime,
-           str(self.getTimeDifference(datetime.now(),numberObj.currentOnlineTime)).split(".")[0]))
+    outputString = "Number: {:>12s}, Currently online from: {}, Difference: {}".format(
+                    numberObj.number,
+                    numberObj.currentOnlineTime,
+                    str(self.getTimeDifference(datetime.now(),numberObj.currentOnlineTime)).split(
+                                                                            ".")[0])
+    print(outputString)
 
 
   def add_time_difference(self, number, tdelta):
@@ -159,7 +179,7 @@ class Graph:
 
     if self.printSum:
       for k, v in iter(self.sort_dict(self.numberData, self.cmp_lastoffline_info)):
-        output = "Number: %s, Time: %s" % (k, v.totalOnline.strftime("%H:%M:%S"))
+        output = "Number: {:>12s}, Time: {}".format(k, v.totalOnline.strftime("%H:%M:%S"))
         if v.currentOnlineTime is None:
           output += ", Last online: {}".format(v.lastOfflineTime)
         else:
@@ -290,7 +310,7 @@ def main(argv):
   if FLAGS.timebefore is not None:
     timeBefore = datetime.strptime(FLAGS.timebefore, FMT)
 
-  g = Graph(timeAfter, timeBefore, FLAGS.offline_delay, FLAGS.sum)
+  g = Graph(timeAfter, timeBefore, FLAGS.offline_delay, FLAGS.sum, FLAGS.offline_interval)
 
   if not FLAGS.skip_graph and FLAGS.graph_type is 3:
     g.duration = FLAGS.duration
