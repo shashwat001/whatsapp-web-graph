@@ -7,6 +7,7 @@ import io
 import logging
 from os.path import expanduser
 from threading import Timer
+from absl import flags
 
 import binascii
 import curve25519
@@ -25,6 +26,10 @@ try:
     import thread
 except ImportError:
     import _thread as thread
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_boolean('localstorage', False, 'Which settings file to use.', short_name='L')
 
 
 
@@ -48,13 +53,18 @@ class WhatsApp:
   subscribeStarted = False
   subscriberList = set()
   settingsFile = None
+  chromeLocalStorageFile = None
+  isLocalStorage = False
 
-  def __init__(self, worker, settingsFile):
+  def __init__(self, worker, settingsFile, chromeLocalStorageFile, isLocalStorage):
     self.worker = worker
     self.settingsFile = settingsFile
+    self.chromeLocalStorageFile = chromeLocalStorageFile
+    self.isLocalStorage = isLocalStorage
 
   def initLocalParams(self):
     logging.info('Entering Initlocalparms')
+    logging.info('Local storage is: {}'.format(self.isLocalStorage))
     self.data = self.restoreSession()
     keySecret = None
     if self.data is None:
@@ -64,8 +74,15 @@ class WhatsApp:
 
     else:
       self.sessionExists = True
-      self.mydata = self.data['myData']
-      keySecret = base64.b64decode(self.mydata["keySecret"])
+      if not self.isLocalStorage:
+        self.mydata = self.data['myData']
+        keySecret = base64.b64decode(self.mydata["keySecret"])
+      else:
+        self.mydata = self.data
+        self.data["clientToken"] = json.loads(self.data["WAToken1"])
+        self.data["serverToken"] = json.loads(self.data["WAToken2"])
+        self.data["clientId"] = json.loads(self.data["WABrowserId"])
+        self.mydata = self.data
 
     self.clientId = self.mydata['clientId']
     self.privateKey = curve25519.Private(secret=keySecret)
@@ -74,7 +91,12 @@ class WhatsApp:
     logging.info('Exiting Initlocalparms')
 
     if self.sessionExists:
-      self.setConnInfoParams(base64.b64decode(self.data["secret"]))
+      if not self.isLocalStorage:
+        self.setConnInfoParams(base64.b64decode(self.data["secret"]))
+      else:
+        secretBundle = json.loads(self.data['WASecretBundle'])
+        self.encKey = base64.b64decode(secretBundle['encKey'])
+        self.macKey = base64.b64decode(secretBundle['macKey'])
     self.subscribeStarted = False
 
   def sendKeepAlive(self):
@@ -96,7 +118,11 @@ class WhatsApp:
       json.dump(jsonObj, outfile)
 
   def restoreSession(self):
-    if (os.path.exists(self.settingsFile)):
+    if self.isLocalStorage and (os.path.exists(self.chromeLocalStorageFile)):
+      with open(self.chromeLocalStorageFile) as file:
+        data = json.load(file)
+        return data
+    elif (os.path.exists(self.settingsFile)):
       with open(self.settingsFile) as file:
         data = json.load(file)
         return data
@@ -245,9 +271,11 @@ class WhatsApp:
 
 
 if __name__ == "__main__":
+  FLAGS(sys.argv)
   home = expanduser("~")
   settingsDir = home + "/.wweb"
   settingsFile = settingsDir + '/data.json'
+  chromeLocalStorageFile = settingsDir + '/localstorage.json'
   loggingDir = settingsDir + "/logs"
   subscribeListFile = settingsDir + '/subscribe.json'
   presenceFile = settingsDir + '/presence.json'
@@ -264,6 +292,6 @@ if __name__ == "__main__":
   logging.Formatter.converter = customTime
 
   iworker = Worker(subscribeListFile, presenceFile, notificationList)
-  wa = WhatsApp(iworker, settingsFile)
+  wa = WhatsApp(iworker, settingsFile, chromeLocalStorageFile, FLAGS.localstorage)
   iworker.wa = wa
   wa.connect()
