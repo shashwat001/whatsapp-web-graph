@@ -3,3 +3,4 @@
 logs
 .idea
 venv
+test.py

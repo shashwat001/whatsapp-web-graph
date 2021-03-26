@@ -31,7 +31,15 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('localstorage', False, 'Which settings file to use.', short_name='L')
 
+def setup_logger(name, log_file, level=logging.INFO):
+  handler = logging.FileHandler(log_file)
+  handler.setFormatter(logging.Formatter('[%(asctime)s] - %(message)s'))
 
+  logger = logging.getLogger(name)
+  logger.setLevel(level)
+  logger.addHandler(handler)
+
+  return logger
 
 class WhatsApp:
   ws = None
@@ -55,6 +63,7 @@ class WhatsApp:
   settingsFile = None
   chromeLocalStorageFile = None
   isLocalStorage = False
+  connectionType = "takeover"
 
   def __init__(self, worker, settingsFile, chromeLocalStorageFile, isLocalStorage):
     self.worker = worker
@@ -149,7 +158,7 @@ class WhatsApp:
       return
     decryptedMessage = AESDecrypt(self.encKey, message[32:])
     processedData = whatsappReadBinary(decryptedMessage, True)
-    logging.info("Actual Message: %s", processedData)
+    binary_logger.info("Actual Message: %s", processedData)
     self.worker.handleIfConversation(processedData)
 
   def sendTextMessage(self, number, text):
@@ -183,8 +192,9 @@ class WhatsApp:
       try:
         jsonObj = json.loads(messageContent)
         logging.info("Raw msg: %s", message)
+        json_logger.info(message)
       except:
-        logging.info("Error in loading message and messagecontent")
+        logging.info("Binary message")
         self.handleBinaryMessage(messageContent)
       else:
         if 'ref' in jsonObj:
@@ -235,7 +245,7 @@ class WhatsApp:
     if self.keepAliveTimer is not None:
       self.keepAliveTimer.cancel()
     logging.info("Timers cancelled. Exiting.")
-    wa.connect()
+    wa.connect("takeover")
 
   def on_open(self, ws):
     logging.info("Socket Opened")
@@ -249,14 +259,15 @@ class WhatsApp:
       clientToken = self.data["clientToken"]
       serverToken = self.data["serverToken"]
       messageTag = str(getTimestamp())
-      message = ('%s,["admin","login","%s","%s","%s","takeover"]' % (
-        messageTag, clientToken, serverToken, self.clientId))
+      message = ('%s,["admin","login","%s","%s","%s","%s"]' % (
+        messageTag, clientToken, serverToken, self.clientId, self.connectionType))
       logging.info(message)
       ws.send(message)
     else:
       logging.info("No data")
 
-  def connect(self):
+  def connect(self, connectionType="takeover"):
+    self.connectionType = connectionType
     self.initLocalParams()
     # websocket.enableTrace(True)
     self.ws = websocket.WebSocketApp("wss://web.whatsapp.com/ws",
@@ -290,6 +301,9 @@ if __name__ == "__main__":
                       format='[%(asctime)s] {%(filename)s:%(lineno)d} - %(message).300s', level=logging.INFO,
                       filemode='a')
   logging.Formatter.converter = customTime
+
+  binary_logger = setup_logger('binary_logger', settingsDir + '/messages.log')
+  json_logger = setup_logger('json_logger', settingsDir + '/json.log')
 
   iworker = Worker(subscribeListFile, presenceFile, notificationList)
   wa = WhatsApp(iworker, settingsFile, chromeLocalStorageFile, FLAGS.localstorage)

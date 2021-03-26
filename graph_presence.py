@@ -30,6 +30,8 @@ flags.DEFINE_boolean('sum', False, 'Print total time online.')
 flags.DEFINE_integer('graph_type', 1, 'Graph type to show.', short_name='g')
 flags.DEFINE_integer('duration', 60, 'Duration for graph type 3.', short_name='D')
 flags.DEFINE_boolean('offline_interval', False, 'Interval for which user was offline.', short_name='o')
+flags.DEFINE_boolean('skip_printing_sessions', False, 'Skip printing sessions.')
+flags.DEFINE_boolean('skip_last_online', False, 'Skip last online.')
 
 # Default offline delay below is manually observed value
 flags.DEFINE_integer('offline_delay', 14, 'Delay in seconds after offline status is received from actual offline',
@@ -93,17 +95,19 @@ class Graph:
         offlineInterval = datetime.now() - numberObj.lastOfflineTime
       outputString += ", then offline for: {}".format(str(offlineInterval).split(".")[0])
 
-    print(outputString)
+    if not FLAGS.skip_printing_sessions:
+      print(outputString)
     self.add_time_difference(numberObj.number, tdelta)
 
   def ongoingOnlineSession(self, numberObj):
     numberObj.onlineCount +=1
-    outputString = "Number: {:>12s}, Currently online from: {}, Difference: {}".format(
-                    numberObj.number,
-                    numberObj.currentOnlineTime,
-                    str(self.getTimeDifference(datetime.now(),numberObj.currentOnlineTime)).split(
-                                                                            ".")[0])
-    print(outputString)
+    if not FLAGS.skip_printing_sessions:
+      outputString = "Number: {:>12s}, Currently online from: {}, Difference: {}".format(
+                      numberObj.number,
+                      numberObj.currentOnlineTime,
+                      str(self.getTimeDifference(datetime.now(),numberObj.currentOnlineTime)).split(
+                                                                              ".")[0])
+      print(outputString)
 
 
   def add_time_difference(self, number, tdelta):
@@ -180,10 +184,11 @@ class Graph:
     if self.printSum:
       for k, v in iter(self.sort_dict(self.numberData, self.cmp_lastoffline_info)):
         output = "Number: {:>12s}, Time: {}".format(k, v.totalOnline.strftime("%H:%M:%S"))
-        if v.currentOnlineTime is None:
-          output += ", Last online: {}".format(v.lastOfflineTime)
-        else:
-          output += ", Last online: now"
+        if not FLAGS.skip_last_online:
+          if v.currentOnlineTime is None:
+            output += ", Last online: {}".format(v.lastOfflineTime)
+          else:
+            output += ", Last online: now"
         print(output)
 
 
