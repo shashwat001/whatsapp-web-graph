@@ -68,13 +68,13 @@ def floor(n):
 def HmacSha256(key, sign):
     return hmac.new(key, sign, hashlib.sha256).digest()
 
-def HKDF(key, length, appInfo=""):						# implements RFC 5869, some parts from https://github.com/MirkoDziadzka/pyhkdf
-    key = HmacSha256("\0"*32, key)
-    keyStream = ""
-    keyBlock = ""
+def HKDF(key, length, appInfo=b""):						# implements RFC 5869, some parts from https://github.com/MirkoDziadzka/pyhkdf
+    key = HmacSha256(b"\0"*32, key)
+    keyStream = b""
+    keyBlock = b""
     blockIndex = 1
     while len(keyStream) < length:
-        keyBlock = hmac.new(key, msg=keyBlock+appInfo+chr(blockIndex), digestmod=hashlib.sha256).digest()
+        keyBlock = hmac.new(key, msg=keyBlock+appInfo+blockIndex.to_bytes(1, byteorder='big'), digestmod=hashlib.sha256).digest()
         blockIndex += 1
         keyStream += keyBlock
     return keyStream[:length]
