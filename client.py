@@ -55,6 +55,7 @@ class WhatsApp:
   mydata = {}
   sessionExists = False
   keepAliveTimer = None
+  reconnect = False
 
   worker = None
   messageSentCount = 0
@@ -245,7 +246,8 @@ class WhatsApp:
     if self.keepAliveTimer is not None:
       self.keepAliveTimer.cancel()
     logging.info("Timers cancelled. Exiting.")
-    wa.connect("takeover")
+    if self.reconnect:
+      wa.connect("takeover")
 
   def on_open(self, ws):
     logging.info("Socket Opened")
