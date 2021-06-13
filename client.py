@@ -30,6 +30,7 @@ except ImportError:
 FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('localstorage', False, 'Which settings file to use.', short_name='L')
+flags.DEFINE_string('wwebdir', None, 'Which settings director to use.', short_name='w')
 
 def setup_logger(name, log_file, level=logging.INFO):
   handler = logging.FileHandler(log_file)
@@ -290,6 +291,8 @@ if __name__ == "__main__":
   FLAGS(sys.argv)
   home = expanduser("~")
   settingsDir = home + "/.wweb"
+  if FLAGS.wwebdir is not None:
+    settingsDir = FLAGS.wwebdir
   settingsFile = settingsDir + '/data.json'
   chromeLocalStorageFile = settingsDir + '/localstorage.json'
   loggingDir = settingsDir + "/logs"

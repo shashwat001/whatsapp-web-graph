@@ -19,6 +19,9 @@ sudo apt-get install python-tk
 ```bash
 python client.py
 ```
+Arguments
+- --localstorage/-L - To read auth info from ~/.wweb/localstorage.json files instead of data.json. The file should have json like in the format of json in chrome/firefox localstorage.
+- --wwebdir/-w - Use custom wwebdir directory.
 
 The config and log directory is `````~/.wweb`````. To subscribe to specific numbers, add a file `````~/.wweb/subscribe.json````` and add numbers one in each line as follows:
 ```
