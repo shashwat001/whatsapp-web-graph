@@ -7,7 +7,7 @@ whatsapp-web-graph is a reverse engineered whatsapp-web python application to ge
 ## Installation
 
 ```
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 #### For graphs
 ```
@@ -17,7 +17,7 @@ sudo apt-get install python-tk
 ## Usage
 
 ```bash
-python client.py
+python3 client.py
 ```
 Arguments
 - --localstorage/-L - To read auth info from ~/.wweb/localstorage.json files instead of data.json. The file should have json like in the format of json in chrome/firefox localstorage.
