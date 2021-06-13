@@ -29,6 +29,9 @@ The config and log directory is `````~/.wweb`````. To subscribe to specific numb
 The logs are put in ```~/.wweb/logs/info.log```  
 The online and offline info of subscribers are put in ```~/.wweb/presence.json```
 
+#### Note
+On April 23, 2021, Whatsapp disabled visibility of online status for the one who doesn't have user's number stored in their contact list. However apparently if the other person has exchanged messages with the user even without saving the number, the online status could be received.
+
 ## Graph generation
 
 To generate bar chart of the users and time spent by them on whatsapp.
