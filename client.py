@@ -55,6 +55,7 @@ class WhatsApp:
   mydata = {}
   sessionExists = False
   keepAliveTimer = None
+  refreshConnectionTimer = None
   reconnect = False
 
   worker = None
@@ -245,6 +246,8 @@ class WhatsApp:
     logging.info("### closed ###")
     if self.keepAliveTimer is not None:
       self.keepAliveTimer.cancel()
+    if self.refreshConnectionTimer is not None:
+      self.refreshConnectionTimer.cancel()
     logging.info("Timers cancelled. Exiting.")
     if self.reconnect:
       wa.connect("takeover")
@@ -278,8 +281,8 @@ class WhatsApp:
                                      on_close=lambda ws: self.on_close(ws),
                                      on_open=lambda ws: self.on_open(ws),
                                      header={"Origin: https://web.whatsapp.com"})
-    endTimer = Timer(11*60*60, lambda: self.ws.close())
-    endTimer.start()
+    self.refreshConnectionTimer = Timer(11*60*60, lambda: self.ws.close())
+    self.refreshConnectionTimer.start()
     self.ws.run_forever()
 
 
