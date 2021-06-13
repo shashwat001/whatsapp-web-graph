@@ -1,7 +1,7 @@
 from google.protobuf import json_format;
 import json;
 import whatsapp_protobuf_pb2;
-
+import struct;
 
 
 class WATags:
@@ -144,11 +144,19 @@ class WAMediaAppInfo:
 
 
 
+def rawbytes(s):
+    """Convert a string to raw bytes without encoding"""
+    outlist = []
+    for cp in s:
+        num = ord(cp)
+        outlist.append(struct.pack('B', num))
+    return b''.join(outlist)
+
 class WAWebMessageInfo:
     @staticmethod
     def decode(data):
         msg = whatsapp_protobuf_pb2.WebMessageInfo();
-        msg.ParseFromString(data);
+        msg.ParseFromString(rawbytes(data));
         return json.loads(json_format.MessageToJson(msg));
     
     @staticmethod

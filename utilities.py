@@ -52,7 +52,7 @@ def getNumValidKeys(obj):
 
 def encodeUTF8(s):
 	if not isinstance(s, str):
-		s = strng.encode("utf-8")
+		s = s.encode("utf-8")
 	return s
 
 

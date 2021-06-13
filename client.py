@@ -13,6 +13,7 @@ import binascii
 import curve25519
 import pyqrcode
 import websocket
+import traceback
 
 from utilities import *
 from whatsapp_binary_reader import whatsappReadBinary
@@ -80,9 +81,9 @@ class WhatsApp:
     self.data = self.restoreSession()
     keySecret = None
     if self.data is None:
-      self.mydata['clientId'] = base64.b64encode(os.urandom(16))
+      self.mydata['clientId'] = base64.b64encode(os.urandom(16)).decode("utf-8")
       keySecret = os.urandom(32)
-      self.mydata["keySecret"] = base64.b64encode(keySecret)
+      self.mydata["keySecret"] = base64.b64encode(keySecret).decode("utf-8")
 
     else:
       self.sessionExists = True
@@ -123,7 +124,7 @@ class WhatsApp:
   def saveSession(self, jsonObj):
     jsonObj['myData'] = self.mydata
     if self.sessionExists:
-      for key, value in jsonObj.iteritems():
+      for key, value in jsonObj.items():
         self.data[key] = value
       jsonObj = self.data
     with open(self.settingsFile, 'w') as outfile:
@@ -184,7 +185,11 @@ class WhatsApp:
 
   def on_message(self, ws, message):
     try:
-      messageSplit = message.split(",", 1)
+      if isinstance(message, str):
+        messageSplit = message.split(",", 1)
+      else:
+        messageSplit = message.split(b",", 1)
+
       if len(messageSplit) == 1:
         logging.info(message)
         return
@@ -192,58 +197,63 @@ class WhatsApp:
       messageContent = messageSplit[1]
       logging.info("Message Tag: %s", messageTag)
 
-      try:
+      if isinstance(message, str):
         jsonObj = json.loads(messageContent)
-        logging.info("Raw msg: %s", message)
-        json_logger.info(message)
-      except:
+        self.handleJsonMessage(message, jsonObj, ws)
+      else:
         logging.info("Binary message")
         self.handleBinaryMessage(messageContent)
-      else:
-        if 'ref' in jsonObj:
-          if self.sessionExists is False:
-            serverRef = json.loads(messageContent)["ref"]
-            qrCodeContents = serverRef + "," + base64.b64encode(self.publicKey.serialize()) + "," + self.clientId
-            svgBuffer = io.BytesIO();  # from https://github.com/mnooner256/pyqrcode/issues/39#issuecomment-207621532
-            img = pyqrcode.create(qrCodeContents, error='L')
-            img.svg(svgBuffer, scale=6, background="rgba(0,0,0,0.0)", module_color="#122E31", quiet_zone=0)
-            print(img.terminal(quiet_zone=1))
-        elif isinstance(jsonObj, list) and len(jsonObj) > 0:
-          if jsonObj[0] == "Conn":
-            logging.info("Connection msg received")
-            self.sendKeepAlive()
-            if self.sessionExists is False:
-              self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
-            self.saveSession(jsonObj[1])
-            if self.subscribeStarted is False:
-              self.worker.subscribe()
-              self.subscribeStarted = True
-
-          elif jsonObj[0] == "Cmd":
-            logging.info("Challenge received")
-            cmdInfo = jsonObj[1]
-            if cmdInfo["type"] == "challenge":
-              challenge = base64.b64decode(cmdInfo["challenge"])
-              sign = base64.b64encode(HmacSha256(self.macKey, challenge))
-              logging.info('sign %s' % sign)
-              messageTag = str(getTimestamp())
-              message = ('%s,["admin","challenge","%s","%s","%s"]' % (
-                messageTag, sign, self.data["serverToken"], self.clientId))
-              logging.info('message %s' % message)
-              ws.send(message)
-          elif jsonObj[0] == "Presence":
-            self.worker.writePresenceToFilefromJson(jsonObj[1])
-        elif isinstance(jsonObj, object):
-          status = jsonObj["status"]
 
     except:
-      logging.info("Some error encountered")
-      raise
+      logging.exception("Some error encountered")
+
+  def handleJsonMessage(self, message, jsonObj, ws):
+    logging.info("Raw msg: %s", message)
+
+    if 'ref' in jsonObj:
+      if self.sessionExists is False:
+        serverRef = jsonObj["ref"]
+        qrCodeContents = serverRef + "," + base64.b64encode(self.publicKey.serialize()).decode(
+          "utf-8") + "," + self.clientId
+        svgBuffer = io.BytesIO();  # from https://github.com/mnooner256/pyqrcode/issues/39#issuecomment-207621532
+        img = pyqrcode.create(qrCodeContents, error='L')
+        img.svg(svgBuffer, scale=6, background="rgba(0,0,0,0.0)", module_color="#122E31", quiet_zone=0)
+        print(img.terminal(quiet_zone=1))
+    elif isinstance(jsonObj, list) and len(jsonObj) > 0:
+      if jsonObj[0] == "Conn":
+        logging.info("Connection msg received")
+        self.sendKeepAlive()
+        if self.sessionExists is False:
+          self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
+        self.saveSession(jsonObj[1])
+        if self.subscribeStarted is False:
+          try:
+            self.worker.subscribe()
+            self.subscribeStarted = True
+          except:
+            pass
+
+      elif jsonObj[0] == "Cmd":
+        logging.info("Challenge received")
+        cmdInfo = jsonObj[1]
+        if cmdInfo["type"] == "challenge":
+          challenge = base64.b64decode(cmdInfo["challenge"])
+          sign = base64.b64encode(HmacSha256(self.macKey, challenge)).decode("utf-8")
+          logging.info('sign %s' % sign)
+          messageTag = str(getTimestamp())
+          message = ('%s,["admin","challenge","%s","%s","%s"]' % (
+            messageTag, sign, self.data["serverToken"], self.clientId))
+          logging.info('message %s' % message)
+          ws.send(message)
+      elif jsonObj[0] == "Presence":
+        self.worker.writePresenceToFilefromJson(jsonObj[1])
+    elif isinstance(jsonObj, object):
+      status = jsonObj["status"]
 
   def on_error(self, ws, error):
     logging.info(error)
 
-  def on_close(self, ws):
+  def on_close(self):
     logging.info("### closed ###")
     if self.keepAliveTimer is not None:
       self.keepAliveTimer.cancel()

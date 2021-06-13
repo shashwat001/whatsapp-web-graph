@@ -13,7 +13,7 @@ class WABinaryReader:
 
     def readByte(self):
         self.checkEOS(1);
-        ret = ord(self.data[self.index]);
+        ret = self.data[self.index];
         self.index += 1;
         return ret;
 
@@ -22,7 +22,7 @@ class WABinaryReader:
         ret = 0;
         for i in range(n):
             currShift = i if littleEndian else n-1-i;
-            ret |= ord(self.data[self.index + i]) << (currShift*8);
+            ret |= (self.data[self.index + i] << (currShift*8));
         self.index += n;
         return ret;
 
@@ -31,7 +31,7 @@ class WABinaryReader:
 
     def readInt20(self):
         self.checkEOS(3);
-        ret = ((ord(self.data[self.index]) & 15) << 16) + (ord(self.data[self.index+1]) << 8) + ord(self.data[self.index+2]);
+        ret = ((self.data[self.index] & 15) << 16) + (self.data[self.index+1] << 8) + self.data[self.index+2];
         self.index += 3;
         return ret;
 
