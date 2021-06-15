@@ -289,7 +289,7 @@ class WhatsApp:
     self.ws = websocket.WebSocketApp("wss://web.whatsapp.com/ws",
                                      on_message=lambda ws, msg: self.on_message(ws, msg),
                                      on_error=lambda ws, msg: self.on_error(ws, msg),
-                                     on_close=lambda ws: self.on_close(ws),
+                                     on_close=lambda ws: self.on_close(),
                                      on_open=lambda ws: self.on_open(ws),
                                      header={"Origin: https://web.whatsapp.com"})
     self.refreshConnectionTimer = Timer(11*60*60, lambda: self.ws.close())
