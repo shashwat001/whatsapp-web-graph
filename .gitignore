@@ -5,3 +5,4 @@ logs
 venv
 test.py
 venv*
+node_modules
