@@ -163,8 +163,9 @@ class Worker:
                 logging.info('key not present in add relay')
               else:
                 sender = actionJson['key']['remoteJid']
-                message = actionJson['message']['conversation']
-                self.handleConversation(sender, message)
+                if 'conversation' in actionJson['message']:
+                    message = actionJson['message']['conversation']
+                    self.handleConversation(sender, message)
         else:
           logging.info("Action metadata not json: %s" % metaData)
       else:
