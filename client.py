@@ -21,7 +21,7 @@ from whatsapp_binary_writer import whatsappWriteBinary
 from whatsapp_defines import *;
 from worker import Worker
 
-WHATSAPP_WEB_VERSION = "0,4,2081"
+WHATSAPP_WEB_VERSION = "2,2121,6"
 
 try:
     import thread
