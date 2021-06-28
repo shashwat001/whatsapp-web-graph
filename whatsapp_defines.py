@@ -155,11 +155,11 @@ def rawbytes(s):
 class WAWebMessageInfo:
     @staticmethod
     def decode(data):
-        msg = whatsapp_protobuf_pb2.WebMessageInfo();
+        msg = whatsapp_protobuf_pb2.WebMessageInfoSpec();
         msg.ParseFromString(rawbytes(data));
         return json.loads(json_format.MessageToJson(msg));
     
     @staticmethod
     def encode(msg):
-        data = json_format.Parse(json.dumps(msg), whatsapp_protobuf_pb2.WebMessageInfo(), ignore_unknown_fields=True);
+        data = json_format.Parse(json.dumps(msg), whatsapp_protobuf_pb2.WebMessageInfoSpec(), ignore_unknown_fields=True);
         return data.SerializeToString();
