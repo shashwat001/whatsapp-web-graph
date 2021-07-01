@@ -253,7 +253,7 @@ class WhatsApp:
   def on_error(self, ws, error):
     logging.info(error)
 
-  def on_close(self):
+  def on_close(self,ws):
     logging.info("### closed ###")
     if self.keepAliveTimer is not None:
       self.keepAliveTimer.cancel()
