@@ -2,7 +2,7 @@
 .vscode
 logs
 .idea
-venv
 test.py
 venv*
 node_modules
+image.json

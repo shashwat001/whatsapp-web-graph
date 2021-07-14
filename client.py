@@ -2,6 +2,9 @@
 
 # WS client example
 
+import sys;
+sys.dont_write_bytecode = True;
+
 import base64
 import io
 import logging
@@ -59,9 +62,11 @@ class WhatsApp:
   keepAliveTimer = None
   refreshConnectionTimer = None
   reconnect = False
+  enableRefresh = False
 
   worker = None
   messageSentCount = 0
+  enableSubscribe = False
   subscribeStarted = False
   subscriberList = set()
   settingsFile = None
@@ -162,8 +167,7 @@ class WhatsApp:
       return
     decryptedMessage = AESDecrypt(self.encKey, message[32:])
     processedData = whatsappReadBinary(decryptedMessage, True)
-    binary_logger.info("Actual Message: %s", processedData)
-    self.worker.handleIfConversation(processedData)
+    binary_logger.info(processedData)
 
   def sendTextMessage(self, number, text):
     message = "?,,"
@@ -205,10 +209,14 @@ class WhatsApp:
         self.handleBinaryMessage(messageContent)
 
     except:
-      logging.exception("Some error encountered")
+      logging.info("Some error encountered")
+      traceback.print_exc()
+      self.ws.close()
+      raise
 
   def handleJsonMessage(self, message, jsonObj, ws):
     logging.info("Raw msg: %s", message)
+    json_logger.info(message)
 
     if 'ref' in jsonObj:
       if self.sessionExists is False:
@@ -226,7 +234,7 @@ class WhatsApp:
         if self.sessionExists is False:
           self.setConnInfoParams(base64.b64decode(jsonObj[1]["secret"]))
         self.saveSession(jsonObj[1])
-        if self.subscribeStarted is False:
+        if self.enableSubscribe and self.subscribeStarted is False:
           try:
             self.worker.subscribe()
             self.subscribeStarted = True
@@ -245,7 +253,7 @@ class WhatsApp:
             messageTag, sign, self.data["serverToken"], self.clientId))
           logging.info('message %s' % message)
           ws.send(message)
-      elif jsonObj[0] == "Presence":
+      elif self.enableSubscribe and jsonObj[0] == "Presence":
         self.worker.writePresenceToFilefromJson(jsonObj[1])
     elif isinstance(jsonObj, object):
       status = jsonObj["status"]
@@ -253,7 +261,7 @@ class WhatsApp:
   def on_error(self, ws, error):
     logging.info(error)
 
-  def on_close(self):
+  def on_close(self, ws):
     logging.info("### closed ###")
     if self.keepAliveTimer is not None:
       self.keepAliveTimer.cancel()
@@ -267,7 +275,7 @@ class WhatsApp:
     logging.info("Socket Opened")
     logging.info("ClientId %s" % self.clientId)
     messageTag = str(getTimestamp())
-    message = messageTag + ',["admin","init",[' + WHATSAPP_WEB_VERSION + '],["Chromium at ' + datetime.datetime.now().isoformat() + '","Chromium"],"' + self.clientId + '",true]'
+    message = messageTag + ',["admin","init",[' + WHATSAPP_WEB_VERSION + '],["Windows", "Chrome", "10"],"' + self.clientId + '",true]'
     logging.info(message)
     ws.send(message)
 
@@ -292,8 +300,9 @@ class WhatsApp:
                                      on_close=lambda ws: self.on_close(ws),
                                      on_open=lambda ws: self.on_open(ws),
                                      header={"Origin: https://web.whatsapp.com"})
-    self.refreshConnectionTimer = Timer(11*60*60, lambda: self.ws.close())
-    self.refreshConnectionTimer.start()
+    if self.enableRefresh:
+      self.refreshConnectionTimer = Timer(11*60*60, lambda: self.ws.close())
+      self.refreshConnectionTimer.start()
     self.ws.run_forever()
 
 
