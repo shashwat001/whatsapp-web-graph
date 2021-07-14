@@ -4,7 +4,7 @@ from threading import Timer
 
 try:
   import pync
-except ImportError:
+except Exception:
   pync = None
 
 

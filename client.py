@@ -48,7 +48,6 @@ def setup_logger(name, log_file, level=logging.INFO):
 
 class WhatsApp:
   ws = None
-  mydata = None
   clientId = None
   privateKey = None
   publicKey = None
@@ -86,6 +85,9 @@ class WhatsApp:
     self.data = self.restoreSession()
     keySecret = None
     if self.data is None:
+      if self.isLocalStorage:
+        raise Exception("Localstorage file does not exist")
+
       self.mydata['clientId'] = base64.b64encode(os.urandom(16)).decode("utf-8")
       keySecret = os.urandom(32)
       self.mydata["keySecret"] = base64.b64encode(keySecret).decode("utf-8")
@@ -96,7 +98,6 @@ class WhatsApp:
         self.mydata = self.data['myData']
         keySecret = base64.b64decode(self.mydata["keySecret"])
       else:
-        self.mydata = self.data
         self.data["clientToken"] = json.loads(self.data["WAToken1"])
         self.data["serverToken"] = json.loads(self.data["WAToken2"])
         self.data["clientId"] = json.loads(self.data["WABrowserId"])
@@ -127,6 +128,8 @@ class WhatsApp:
     self.keepAliveTimer.start()
 
   def saveSession(self, jsonObj):
+    if self.isLocalStorage:
+      return
     jsonObj['myData'] = self.mydata
     if self.sessionExists:
       for key, value in jsonObj.items():
@@ -136,10 +139,11 @@ class WhatsApp:
       json.dump(jsonObj, outfile)
 
   def restoreSession(self):
-    if self.isLocalStorage and (os.path.exists(self.chromeLocalStorageFile)):
-      with open(self.chromeLocalStorageFile) as file:
-        data = json.load(file)
-        return data
+    if self.isLocalStorage:
+      if os.path.exists(self.chromeLocalStorageFile):
+        with open(self.chromeLocalStorageFile) as file:
+          data = json.load(file)
+          return data
     elif (os.path.exists(self.settingsFile)):
       with open(self.settingsFile) as file:
         data = json.load(file)
